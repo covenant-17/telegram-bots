@@ -1,5 +1,6 @@
 # Java/Maven
 /target/
+**/target/
 /src/main/resources/application.properties
 *.iml
 *.class
@@ -8,6 +9,14 @@
 *.jar
 *.war
 *.ear
+
+# Maven compiler plugin files
+**/maven-status/
+**/maven-archiver/
+**/surefire-reports/
+**/generated-sources/
+**/generated-test-sources/
+*.lst
 
 # IDE
 .idea/
