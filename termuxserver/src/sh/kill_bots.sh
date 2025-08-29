@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+﻿#!/data/data/com.termux/files/usr/bin/bash
 # Kill Java processes for converter-bot, rt-file-converter-bot, and youtube-mp3-downloader
 LOGS_DIR="/data/data/com.termux/files/home/termuxserver/logs"
 KILL_LOG="$LOGS_DIR/killed_processes.log"

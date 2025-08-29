@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+﻿#!/data/data/com.termux/files/usr/bin/bash
 # Script for running both converter-bot and fileconverter bots in Termux
 
 # Kill previous bot processes using external script
