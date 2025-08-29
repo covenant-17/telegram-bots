@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Stress tests and edge-cases for CommandHandler
+ * Стресс-тесты и edge-cases для CommandHandler
  */
 class CommandHandlerStressTest {
 
@@ -116,7 +116,7 @@ class CommandHandlerStressTest {
     void testUnicodeMessages() {
         String[] unicodeMessages = {
             "🎵 https://youtu.be/test 🎵",
-            "Hello! https://youtu.be/test",
+            "Привет! https://youtu.be/test",
             "こんにちは https://youtu.be/test",
             "مرحبا https://youtu.be/test",
             "💯🔥🎶 https://youtu.be/test 🎶🔥💯"
