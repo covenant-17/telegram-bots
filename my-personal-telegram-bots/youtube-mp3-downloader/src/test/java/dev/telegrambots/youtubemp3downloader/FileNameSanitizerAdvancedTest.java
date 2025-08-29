@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Additional tests for FileNameSanitizer to cover edge-cases
+ * Дополнительные тесты для FileNameSanitizer для покрытия edge-cases
  */
 class FileNameSanitizerAdvancedTest {
 
@@ -41,7 +41,7 @@ class FileNameSanitizerAdvancedTest {
     @Test
     @DisplayName("Should handle Unicode characters")
     void testUnicodeCharacters() {
-        String unicode = "🎵 Music - Song 音楽 موسيقى (Official)";
+        String unicode = "🎵 Музыка - Song 音楽 موسيقى (Official)";
         String result = FileNameSanitizer.sanitize(unicode);
         
         assertNotNull(result);

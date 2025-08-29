@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Extended tests for CommandHandler with edge-cases and error scenarios coverage
+ * Расширенные тесты для CommandHandler с покрытием edge-cases и ошибочных сценариев
  */
 class CommandHandlerExtendedTest {
     @Mock
@@ -183,7 +183,7 @@ class CommandHandlerExtendedTest {
             when(message.hasText()).thenReturn(true);
             when(message.getText()).thenReturn(url);
             boolean result = CommandHandler.handle(bot, update);
-            assertNotNull(result); // Just check that it's not null
+            assertNotNull(result); // Просто проверяем, что не null
         }
     }
 
@@ -277,7 +277,7 @@ class CommandHandlerExtendedTest {
     @Test
     @DisplayName("Should handle special characters in text with YouTube links")
     void testHandleSpecialCharactersWithYoutubeLinks() {
-        String text = "🎵 Check this: https://youtu.be/dQw4w9WgXcQ 🎶 Amazing! Chinese test English text";
+        String text = "🎵 Check this: https://youtu.be/dQw4w9WgXcQ 🎶 Amazing! 中文测试 русский текст";
         
         when(update.hasMessage()).thenReturn(true);
         when(message.hasText()).thenReturn(true);
