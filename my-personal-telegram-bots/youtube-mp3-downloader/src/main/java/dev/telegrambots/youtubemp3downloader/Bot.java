@@ -10,6 +10,8 @@ public class Bot extends TelegramLongPollingBot {
     private final String botToken;
     private final String botUsername;
 
+    // Using deprecated constructor for compatibility with current Telegram Bots API version
+    // TODO: Update to new constructor when upgrading to newer API version
     public Bot() {
         super(ResourceBundle.getBundle("config").getString("bot.token"));
         ResourceBundle config = ResourceBundle.getBundle("config");

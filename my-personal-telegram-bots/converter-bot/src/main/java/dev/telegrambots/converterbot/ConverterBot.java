@@ -23,6 +23,7 @@ public class ConverterBot extends TelegramLongPollingBot {
   private final BotConfig config;
 
   @SuppressWarnings("deprecation") // Suppress deprecation warning for constructor
+  // TODO: Update to new constructor when upgrading to newer Telegram Bots API version
   public ConverterBot() {
     super();
     this.config = new BotConfig();

@@ -78,3 +78,27 @@ logs/
 workzone/
 *.pid
 *.lock
+
+# Media files and downloads
+*.mp3
+*.mp4
+*.webm
+*.m4a
+*.flac
+*.wav
+*.ogg
+downloads/
+temp/
+
+# yt-dlp cache and temporary files
+.yt-dlp/
+*.part
+*.ytdl
+
+# FFmpeg temporary files
+ffmpeg2pass-0.log
+ffmpeg2pass-0.log.mbtree
+
+# Configuration files (should not be committed)
+config.properties
+*.properties

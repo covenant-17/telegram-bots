@@ -65,6 +65,12 @@
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Shared configuration module -->
+        <dependency>
+            <groupId>dev.telegrambots</groupId>
+            <artifactId>shared-config</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
     
     <!-- Maven Profiles for different test types -->
