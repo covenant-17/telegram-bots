@@ -51,7 +51,7 @@ public class CommandHandler {
             java.util.List<String> urls = new java.util.ArrayList<>(urlSet);
             if (urls.size() > 1) {
                 long batchStart = System.currentTimeMillis();
-                int approxSec = (int)Math.ceil(urls.size() * 60.0 / config.maxParallelDownloads); // 1 минута на ссылку, параллельно
+                int approxSec = (int)Math.ceil(urls.size() * 60.0 / config.maxParallelDownloads); // 1 minute per link, parallel processing
                 telegram.sendText(message.getChatId(), "🤯 Detected " + urls.size() + " YouTube links! Up to " + config.maxParallelDownloads + " will be processed in parallel. Files will be sent as soon as each is ready.\nApproximate export time: " + approxSec + " seconds (" + (approxSec/60) + " min)");
                 new Thread(() -> {
                     int total = urls.size();
@@ -170,7 +170,7 @@ public class CommandHandler {
                 telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
                 try { Thread.sleep(1000); } catch (InterruptedException e) {
                     logger.warn("[{}] InterruptedException occurred: {}", now(), e.getMessage(), e);
-                    Thread.currentThread().interrupt(); // Восстанавливаем статус прерывания потока
+                    Thread.currentThread().interrupt(); // Restore interrupted status
                 }
             }
         });
