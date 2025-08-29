@@ -20,19 +20,22 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 public class ConverterBot extends TelegramLongPollingBot {
 
-  @SuppressWarnings("deprecation") // подавляем предупреждение о deprecated конструкторе
+  private final BotConfig config;
+
+  @SuppressWarnings("deprecation") // Suppress deprecation warning for constructor
   public ConverterBot() {
     super();
+    this.config = new BotConfig();
   }
 
   @Override
   public String getBotUsername() {
-    return "webm_to_mp4_converter_r_bot"; // Bot name, do not change
+    return config.botUsername;
   }
 
   @Override
   public String getBotToken() {
-    return "7531354169:AAFzf547M4Y4MzavRZkI_vPJo7pde5QxbAc"; // Bot token, keep it secret
+    return config.botToken;
   }
 
   @Override
@@ -43,7 +46,7 @@ public class ConverterBot extends TelegramLongPollingBot {
         // Welcome message
         String welcome = "[SUCCESS ✅] " + getRandomText(
           "welcome",
-          "src/main/resources/bot_texts_welcome.json"
+          "bot_texts_welcome.json"
         ) + " 👋";
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(message.getChatId().toString());
@@ -62,12 +65,12 @@ public class ConverterBot extends TelegramLongPollingBot {
         ) {
           try {
             System.out.println("[bot] File received: " + fileName);
-            // Loader on
+            // Show typing indicator
             SendChatAction loader = new SendChatAction();
             loader.setChatId(message.getChatId().toString());
             loader.setAction(ActionType.UPLOADDOCUMENT);
             execute(loader);
-            // Downloading file
+            // Download file
             File file = execute(new GetFile(document.getFileId()));
             java.io.File inputFile = downloadFile(file.getFilePath());
             System.out.println(
@@ -78,22 +81,22 @@ public class ConverterBot extends TelegramLongPollingBot {
             System.out.println(
               "[bot] Conversion finished: " + mp4File.getAbsolutePath()
             );
-            // Send back
+            // Send result back
             SendDocument sendDocument = new SendDocument();
             sendDocument.setChatId(message.getChatId().toString());
             sendDocument.setDocument(new InputFile(mp4File));
-            // Send done message
+            // Success message
             String doneMsg = "[SUCCESS ✅] " + getRandomText(
               "done",
-              "src/main/resources/bot_texts_done.json"
+              "bot_texts_done.json"
             ) + " 🎬";
-            sendDocument.setCaption(doneMsg); // подпись к файлу
+            sendDocument.setCaption(doneMsg); // File caption
             execute(sendDocument);
             System.out.println("[bot] MP4 sent to user.");
-            // Cleanup
+            // Clean up temporary files
             inputFile.delete();
             mp4File.delete();
-            // Loader off
+            // Stop typing indicator
             SendChatAction done = new SendChatAction();
             done.setChatId(message.getChatId().toString());
             done.setAction(ActionType.TYPING);
@@ -103,7 +106,7 @@ public class ConverterBot extends TelegramLongPollingBot {
             e.printStackTrace();
             SendMessage errorMsg = new SendMessage();
             errorMsg.setChatId(message.getChatId().toString());
-            errorMsg.setText("[ERROR ☢️☣️] Произошла ошибка при конвертации файла. Попробуйте еще раз. ❌");
+            errorMsg.setText("[ERROR ☢️☣️] An error occurred during file conversion. Please try again. ❌");
             try {
               execute(errorMsg);
             } catch (Exception ignored) {}
@@ -112,7 +115,7 @@ public class ConverterBot extends TelegramLongPollingBot {
           // Unsupported file type
           String wrongTypeMsg = "[ERROR ☢️☣️] " + getRandomText(
             "wrongtype",
-            "src/main/resources/bot_texts_wrongtype.json"
+            "bot_texts_wrongtype.json"
           ) + " 🚫";
           SendMessage wrongTypeMessage = new SendMessage();
           wrongTypeMessage.setChatId(message.getChatId().toString());
@@ -130,7 +133,7 @@ public class ConverterBot extends TelegramLongPollingBot {
     throws IOException, InterruptedException {
     String mp4Path;
     String name = inputFile.getAbsolutePath();
-    // Remove .tmp if present
+    // Remove .tmp extension if present
     if (name.endsWith(".tmp")) {
       name = name.substring(0, name.length() - 4);
     }
@@ -142,7 +145,7 @@ public class ConverterBot extends TelegramLongPollingBot {
       mp4Path = name + ".mp4";
     }
     ProcessBuilder pb = new ProcessBuilder(
-      "ffmpeg",
+      config.ffmpegPath,
       "-y",
       "-i",
       inputFile.getAbsolutePath(),

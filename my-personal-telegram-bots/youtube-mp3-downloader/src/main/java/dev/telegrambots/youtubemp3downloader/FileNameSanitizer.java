@@ -7,13 +7,13 @@ import java.io.File;
 
 public class FileNameSanitizer {
     /**
-     * Map<Pattern, String> — правила очистки имени файла.
-     * Ключ: регулярное выражение для поиска мусора/шаблона.
-     * Значение: на что заменить найденное (обычно пустая строка или пробел).
+     * Map<Pattern, String> - file name cleaning rules.
+     * Key: regular expression to find garbage/patterns.
+     * Value: what to replace the found text with (usually empty string or space).
      *
-     * Правила:
-     * - Удаляют мусорные теги (z2.fm, official, lyric, kbps и т.д.)
-     * - Убирают спецсимволы (#, &, ;, кавычки, скобки, запятые)
+     * Rules:
+     * - Remove garbage tags (z2.fm, official, lyric, kbps, etc.)
+     * - Remove special characters (#, &, ;, quotes, brackets, commas)
      * - Приводят к красивому виду (убирают двойные пробелы, подчёркивания, дефисы)
      * - Заменяют html- и unicode-апострофы на обычный '
      * - Оставляют только полезную информацию (исполнитель, название)

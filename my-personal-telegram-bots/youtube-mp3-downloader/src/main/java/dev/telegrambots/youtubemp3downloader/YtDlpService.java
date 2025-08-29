@@ -94,7 +94,7 @@ public class YtDlpService {
             return false;
         }
         
-        // Создаём временную папку для temp-файлов
+        // Create temporary directory for temp files
         File audioFile = new File(outputPath);
         File tempDir = new File(audioFile.getParent(), "temp_mp3");
         if (!tempDir.exists()) tempDir.mkdirs();
@@ -102,11 +102,11 @@ public class YtDlpService {
         String tempFileName = baseName + "_" + System.currentTimeMillis() + ".mp3";
         File tempFile = new File(tempDir, tempFileName);
 
-        // Скачиваем аудио во временный файл
+        // Download audio to temporary file
         boolean audioOk = downloadAudio(url, tempFile.getAbsolutePath());
         if (!audioOk) return false;
 
-        // 2. Скачиваем thumbnail во временный файл
+        // Download thumbnail to temporary file
         String thumbPath = tempFile.getAbsolutePath() + ".jpg";
         ProcessBuilder pbThumb = new ProcessBuilder(
                 ytDlpPath,
@@ -373,4 +373,4 @@ public class YtDlpService {
     }
 }
 
-// Примечание: не все плееры отображают embedded cover art в mp3. Встраивание картинки через ffmpeg работает (ID3v2 APIC), но отображение зависит от клиента (Telegram, VLC, Windows Media Player и т.д.).
+// Note: not all players display embedded cover art in mp3. Embedding image via ffmpeg works (ID3v2 APIC), but display depends on the client (Telegram, VLC, Windows Media Player, etc.).
