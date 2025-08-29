@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Дополнительные тесты для FileNameSanitizer для покрытия edge-cases
+ * Additional tests for FileNameSanitizer to cover edge-cases
  */
 class FileNameSanitizerAdvancedTest {
 

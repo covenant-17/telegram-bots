@@ -67,8 +67,8 @@
         </dependency>
     </dependencies>
     
-    <!-- Maven Profiles для разных типов тестов -->
-    <profiles>        <!-- Профиль для основных тестов без Mockito проблем -->
+    <!-- Maven Profiles for different test types -->
+    <profiles>        <!-- Profile for core tests without Mockito issues -->
         <profile>
             <id>core-tests</id>
             <build>
@@ -105,7 +105,7 @@
                 </plugins>
             </build>
         </profile>
-          <!-- Профиль для всех тестов включая Mockito -->
+          <!-- Profile for all tests including Mockito -->
         <profile>
             <id>all-tests</id>
             <build>

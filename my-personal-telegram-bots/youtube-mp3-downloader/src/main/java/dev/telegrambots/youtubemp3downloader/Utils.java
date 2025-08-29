@@ -68,7 +68,7 @@ public class Utils {
         if (maxMinutes == 0.0) {
             return durationSeconds == 0.0;
         }
-        // Любая отрицательная длительность — true (для permissive-режима и всех тестов)
+        // Any negative duration returns true (for permissive mode and all tests)
         if (durationSeconds < 0) {
             return true;
         }

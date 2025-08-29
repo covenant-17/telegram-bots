@@ -1,19 +1,19 @@
 package dev.telegrambots.youtubemp3downloader;
 
 /**
- * Интерфейс для запуска внешних процессов. 
- * Выделен в отдельный интерфейс для возможности мокирования в тестах.
+ * Interface for running external processes.
+ * Separated into interface for mocking capability in tests.
  */
 public interface ProcessRunner {
     /**
-     * Запускает процесс с заданными параметрами
-     * @param command команда и аргументы для запуска
-     * @return результат выполнения процесса
+     * Runs process with specified parameters
+     * @param command command and arguments to run
+     * @return process execution result
      */
     ProcessResult runProcess(String... command);
     
     /**
-     * Результат выполнения процесса
+     * Process execution result
      */
     class ProcessResult {
         private final int exitCode;

@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Расширенные тесты для YtDlpService включая edge-cases и ошибочные сценарии
+ * Extended tests for YtDlpService including edge-cases and error scenarios
  */
 class YtDlpServiceExtendedTest {
     private YtDlpService service;
@@ -31,7 +31,7 @@ class YtDlpServiceExtendedTest {
         service = new YtDlpService(ytDlpPath, ffmpegPath, ffprobePath, maxFileSize, maxDurationMinutes);
     }
 
-    // === Тесты размера файла ===
+    // === File size tests ===
     @Test
     @DisplayName("Should return false for non-existent file (not within limit)")
     void testIsFileSizeWithinLimitNonExistentFile() {
@@ -92,7 +92,7 @@ class YtDlpServiceExtendedTest {
     void testIsDurationWithinLimitEdgeCases() {
         assertTrue(service.isDurationWithinLimit(0)); // 0 seconds
         assertTrue(service.isDurationWithinLimit(1)); // 1 second
-        assertTrue(service.isDurationWithinLimit(-1)); // negative duration теперь тоже true
+        assertTrue(service.isDurationWithinLimit(-1)); // negative duration is now also true
         assertTrue(service.isDurationWithinLimit(maxDurationMinutes * 60)); // exactly at limit
         assertFalse(service.isDurationWithinLimit(maxDurationMinutes * 60 + 1)); // 1 second over limit
     }
@@ -326,10 +326,10 @@ class YtDlpServiceExtendedTest {
     @Test
     @DisplayName("Should handle service with negative limits")
     void testServiceWithNegativeLimits() {
-        // Тест полностью отключён как ненужный, чтобы не мешал CI/CD
+        // Test completely disabled as unnecessary to avoid interfering with CI/CD
     }
 
-    // === Вспомогательные методы ===
+    // === Helper methods ===
     private boolean isExecutableOnPath(String exec) {
         String path = System.getenv("PATH");
         if (path == null) return false;

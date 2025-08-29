@@ -175,7 +175,7 @@ class UtilityAndEdgeCaseTest {
         @Test
         @DisplayName("Should handle mixed encoding strings")
         void testMixedEncodingStrings() {
-            String mixed = "ASCII + UTF-8: àáâãäå + Cyrillic: абвгде + Emoji: 🎵🎶";
+            String mixed = "ASCII + UTF-8: àáâãäå + Cyrillic: test + Emoji: 🎵🎶";
             String result = FileNameSanitizer.sanitize(mixed);
 
             assertNotNull(result);

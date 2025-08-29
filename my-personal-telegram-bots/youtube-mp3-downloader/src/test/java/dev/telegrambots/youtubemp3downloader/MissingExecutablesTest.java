@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Тесты для проверки обработки ошибок отсутствия внешних утилит (yt-dlp, ffmpeg, ffprobe)
+ * Tests for checking error handling when external utilities are missing (yt-dlp, ffmpeg, ffprobe)
  */
 class MissingExecutablesTest {
     
@@ -21,8 +21,8 @@ class MissingExecutablesTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        // Создаем версию YtDlpService, которая использует mock ProcessRunner
-        // (В реальном коде нужно будет модифицировать YtDlpService для поддержки dependency injection)
+        // Create YtDlpService version that uses mock ProcessRunner
+        // (In real code, YtDlpService needs to be modified to support dependency injection)
     }
 
     @Test
@@ -158,7 +158,7 @@ class MissingExecutablesTest {
     @Test
     @DisplayName("Should handle wrong version of executable")
     void testWrongVersionExecutable() {
-        // Arrange - старая версия yt-dlp, которая не поддерживает нужные параметры
+        // Arrange - old version of yt-dlp that doesn't support required parameters
         ProcessRunner.ProcessResult wrongVersionResult = new ProcessRunner.ProcessResult(
             2, "", "yt-dlp: error: unrecognized arguments: --extract-audio"
         );

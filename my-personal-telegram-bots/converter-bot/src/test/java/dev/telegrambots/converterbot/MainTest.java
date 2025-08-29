@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class MainTest {
     @Test
     void testMainRuns() {
-        // Простой smoke-тест
+        // Simple smoke test
         Main.main(new String[] {});
         assertTrue(true);
     }

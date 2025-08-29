@@ -4,11 +4,11 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Простой тест для проверки реального поведения FileNameSanitizer
+ * Simple test to verify actual FileNameSanitizer behavior
  */
 class DebugSanitizerTest {    @Test
     void debugActualOutput() {
-        // Проверим фактический вывод sanitizer'а
+        // Check actual sanitizer output
         String result1 = FileNameSanitizer.sanitize("Ñoño - 🎵 Music");
         System.out.println("1: \"" + result1 + "\"");
         
@@ -24,7 +24,7 @@ class DebugSanitizerTest {    @Test
         String result5 = FileNameSanitizer.sanitize("Encoded%7cCharacters");
         System.out.println("5: \"" + result5 + "\"");
         
-        // Дополнительные тесты для падающих случаев
+        // Additional tests for edge cases
         String result6 = FileNameSanitizer.sanitize("Multiple...Dots");
         System.out.println("6: \"" + result6 + "\"");
         

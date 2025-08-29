@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Disabled;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Тесты для класса BotConfig
+ * Tests for BotConfig class
  * Note: Tests disabled due to Mockito limitations with System.getProperty() in Java 21
  */
 class BotConfigTest {
