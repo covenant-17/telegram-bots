@@ -1,0 +1,22 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "type": "java",
+            "name": "MainBot (rt-file-converter-bot)",
+            "request": "launch",
+            "mainClass": "dev.telegrambots.fileconverter.MainBot",
+            "projectName": "rt-file-converter-bot"
+        },
+        {
+            "type": "java",
+            "name": "Launch Main with Maven Clean Package (youtube-mp3-downloader)",
+            "request": "launch",
+            "mainClass": "dev.telegrambots.youtubemp3downloader.Main",
+            "projectName": "youtube-mp3-downloader",
+            "preLaunchTask": "Maven: Package Uber Jar (youtube-mp3-downloader)"
+        }
+    ]
+}

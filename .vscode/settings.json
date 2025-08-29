@@ -1,0 +1,16 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.project.sourcePaths": [
+        "telegram-bots/youtube-mp3-downloader"
+    ],
+    "maven.terminal.favorites": [
+        {
+            "command": "clean package",
+            "debug": false
+        },
+        {
+            "command": "clean compile assembly:single",
+            "debug": false
+        }
+    ]
+}

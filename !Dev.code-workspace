@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"java.configuration.updateBuildConfiguration": "automatic",
+		"java.project.sourcePaths": [
+			"telegram-bots/youtube-mp3-downloader"
+		],
+		"java.compile.nullAnalysis.mode": "automatic",
+		"maven.view": "flat"
+	}
+}
