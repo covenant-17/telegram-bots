@@ -28,12 +28,12 @@ public abstract class BaseBotConfig {
     protected BaseBotConfig() {
         this.config = ResourceBundle.getBundle("config");
         
-        // Validate required configuration
-        validateConfiguration();
-
         // Common file limits
         this.maxFileSize = getLongProperty("max.filesize", 50 * 1024 * 1024L);
         this.maxDurationMinutes = getDoubleProperty("max.duration", 10.0);
+        
+        // NOTE: Validation is NOT called here - subclasses should call validateConfiguration()
+        // after initializing their fields
     }
 
     /**

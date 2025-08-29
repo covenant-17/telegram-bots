@@ -41,6 +41,9 @@ public class BotConfig extends BaseBotConfig {
 
         // Maximum parallel downloads (default: 3)
         this.maxParallelDownloads = getIntProperty("max.parallel.downloads", 3);
+        
+        // Validate configuration after all fields are initialized
+        validateConfiguration();
     }
     
     @Override
