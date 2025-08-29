@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="maven-antrun-" default="main">
-  <target name="main">
-    <copy file="C:\!Dev\my-personal-telegram-bots\youtube-mp3-downloader\target/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar" tofile="c:/!Dev/termuxserver/src/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar" />
-  </target>
-</project>

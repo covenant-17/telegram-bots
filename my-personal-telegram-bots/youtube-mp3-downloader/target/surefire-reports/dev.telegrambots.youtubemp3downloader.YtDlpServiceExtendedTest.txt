@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: dev.telegrambots.youtubemp3downloader.YtDlpServiceExtendedTest
--------------------------------------------------------------------------------
-Tests run: 27, Failures: 0, Errors: 0, Skipped: 7, Time elapsed: 5.412 s -- in dev.telegrambots.youtubemp3downloader.YtDlpServiceExtendedTest
