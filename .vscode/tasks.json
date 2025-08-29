@@ -1,0 +1,47 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Maven: Package Uber Jar (converter-bot)",
+			"command": "mvn",
+			"args": [
+				"clean",
+				"package"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/my-personal-telegram-bots/converter-bot"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Maven: Package Uber Jar (rt-file-converter-bot)",
+			"command": "mvn",
+			"args": [
+				"clean",
+				"package"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/telegram-bots/rt-file-converter-bot"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Maven: Package Uber Jar (youtube-mp3-downloader)",
+			"command": "mvn",
+			"args": [
+				"clean",
+				"package"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/my-personal-telegram-bots/youtube-mp3-downloader"
+			}
+		}
+	]
+}

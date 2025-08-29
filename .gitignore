@@ -1,0 +1,47 @@
+# Java/Maven
+/target/
+/src/main/resources/application.properties
+*.iml
+*.class
+*.log
+*.tmp
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+logs/
+*.tmp
+*.swp
+
+# Sensitive files
+*.properties
+config/
+.env*
+
+# Build artifacts
+*.exe
+*.dll
+
+# Учебный код (опционально)
+Files/Java/
+
+# Tools (оставляем путь, игнорируем файлы, кроме .md)
+Tools/*
+!Tools/*.md
+
+# .vscode (пушим полезные настройки, но игнорируем личные)
+.vscode/sftp.json  # если содержит личные ключи/пароли
+
+# Дополнительные игноры
+Any files/
+.tmp.driveupload/

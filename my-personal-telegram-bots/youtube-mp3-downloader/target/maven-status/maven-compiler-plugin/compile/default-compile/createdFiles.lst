@@ -1,0 +1,13 @@
+dev\telegrambots\youtubemp3downloader\ProcessRunner.class
+dev\telegrambots\youtubemp3downloader\Bot.class
+dev\telegrambots\youtube\YtDlpRunner.class
+dev\telegrambots\youtubemp3downloader\CommandHandler.class
+dev\telegrambots\youtubemp3downloader\Main.class
+dev\telegrambots\youtubemp3downloader\TelegramService.class
+dev\telegrambots\youtubemp3downloader\FileNameSanitizer.class
+dev\telegrambots\youtubemp3downloader\Utils.class
+dev\telegrambots\youtubemp3downloader\BotConfig.class
+dev\telegrambots\youtubemp3downloader\YtDlpService.class
+dev\telegrambots\youtubemp3downloader\SystemProcessRunner.class
+dev\telegrambots\youtubemp3downloader\ProcessRunner$ProcessResult.class
+dev\telegrambots\youtubemp3downloader\FileNameSanitizerCli.class

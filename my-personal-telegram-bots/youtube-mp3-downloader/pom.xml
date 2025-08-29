@@ -1,0 +1,254 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>dev.telegrambots</groupId>
+    <artifactId>youtube-mp3-downloader</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>youtube-mp3-downloader</name>
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <telegrambots.version>6.8.0</telegrambots.version>
+        <slf4j.version>2.0.13</slf4j.version>
+        <junit.jupiter.version>5.10.2</junit.jupiter.version>
+        <mockito.inline.version>4.11.0</mockito.inline.version>
+        <bytebuddy.version>1.14.18</bytebuddy.version>
+        <json.version>20240303</json.version>
+        <commonsio.version>2.15.1</commonsio.version>
+        <jacoco.version>0.8.11</jacoco.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots</artifactId>
+            <version>${telegrambots.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>${commonsio.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>${json.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>${bytebuddy.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>${bytebuddy.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>${mockito.inline.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+    <!-- Maven Profiles для разных типов тестов -->
+    <profiles>        <!-- Профиль для основных тестов без Mockito проблем -->
+        <profile>
+            <id>core-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.1.2</version>
+                        <configuration>                            <includes>
+                                <include>**/FileNameSanitizerTest.java</include>
+                                <include>**/FileNameSanitizerAdvancedTest.java</include>
+                                <include>**/DebugSanitizerTest.java</include>
+                                <include>**/MainTest.java</include>
+                                <include>**/UtilsTest.java</include>
+                                <include>**/UtilsExtensiveTest.java</include>
+                                <include>**/UtilityAndEdgeCaseTest.java</include>
+                                <include>**/SystemProcessRunnerTest.java</include>
+                                <include>**/BotConfigTest.java</include>
+                            </includes>
+                            <argLine>
+                                --add-opens java.base/java.lang=ALL-UNNAMED
+                                --add-opens java.base/java.util=ALL-UNNAMED
+                                --add-opens java.base/java.io=ALL-UNNAMED
+                                --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                                --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                                --add-opens java.base/java.text=ALL-UNNAMED
+                                --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                                --add-opens java.base/java.nio=ALL-UNNAMED
+                                --add-opens java.desktop/java.awt=ALL-UNNAMED
+                                --illegal-access=warn
+                            </argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+          <!-- Профиль для всех тестов включая Mockito -->
+        <profile>
+            <id>all-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.1.2</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*Test.java</include>
+                                <include>**/*Tests.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <mockito.verboseLogging>false</mockito.verboseLogging>
+                            </systemPropertyVariables>                            <argLine>
+                                --add-opens java.base/java.lang=ALL-UNNAMED
+                                --add-opens java.base/java.util=ALL-UNNAMED
+                                --add-opens java.base/java.io=ALL-UNNAMED
+                                --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                                --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                                --add-opens java.base/java.text=ALL-UNNAMED
+                                --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                                --add-opens java.base/java.nio=ALL-UNNAMED
+                                --add-opens java.desktop/java.awt=ALL-UNNAMED
+                                --illegal-access=warn
+                            </argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    
+      <build>      <plugins>
+            <!-- Maven Surefire Plugin - Default configuration -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                        --add-opens java.base/java.text=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                        --add-opens java.base/java.nio=ALL-UNNAMED
+                        --add-opens java.desktop/java.awt=ALL-UNNAMED
+                        --illegal-access=warn
+                    </argLine>
+                    <systemPropertyVariables>
+                        <mockito.verboseLogging>false</mockito.verboseLogging>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            
+            <!-- JaCoCo plugin for code coverage -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.50</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>dev.telegrambots.youtubemp3downloader.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-uber-jar-to-termuxserver</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <copy file="${project.build.directory}/${project.build.finalName}-jar-with-dependencies.jar"
+                                      tofile="c:/!Dev/termuxserver/src/${project.build.finalName}-jar-with-dependencies.jar"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

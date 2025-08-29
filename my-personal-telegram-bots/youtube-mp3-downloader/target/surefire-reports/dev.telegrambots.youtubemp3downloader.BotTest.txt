@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: dev.telegrambots.youtubemp3downloader.BotTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 7, Time elapsed: 0.256 s -- in dev.telegrambots.youtubemp3downloader.BotTest
