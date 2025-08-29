@@ -1,0 +1,35 @@
+# Telegram Bot Configuration
+# Get your bot token from @BotFather on Telegram
+bot.token=YOUR_BOT_TOKEN_HERE
+
+# Your bot username (without @)
+bot.username=your_bot_username
+
+# Tool paths (default commands, will use PATH if available)
+# These work if tools are in your system PATH
+yt-dlp.path=yt-dlp
+ffmpeg.path=ffmpeg
+ffprobe.path=ffprobe
+
+# Windows-specific absolute paths (uncomment and modify if needed)
+# Use these if tools are not in PATH or you want specific versions
+# yt-dlp.path.win=C:/path/to/your/Tools/yt-dlp/yt-dlp.exe
+# ffmpeg.path.win=C:/path/to/your/Tools/ffmpeg/bin/ffmpeg.exe
+# ffprobe.path.win=C:/path/to/your/Tools/ffmpeg/bin/ffprobe.exe
+
+# File size and duration limits
+# Maximum file size in bytes (default: 50MB)
+max.filesize=52428800
+
+# Maximum video duration in minutes (default: 10 minutes)
+max.duration=10.0
+
+# Parallel downloads limit (default: 3, reduced for stability)
+max.parallel.downloads=1
+
+# Configuration Instructions:
+# 1. Copy this file to config.properties
+# 2. Replace YOUR_BOT_TOKEN_HERE with your actual bot token from @BotFather
+# 3. Update bot.username with your bot's username
+# 4. Adjust paths if your tools are installed in custom locations
+# 5. Modify limits based on your server capabilities and requirements

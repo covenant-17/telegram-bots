@@ -25,6 +25,7 @@ logs/
 
 # Sensitive files
 *.properties
+!**/config.properties.example
 config/
 .env*
 
