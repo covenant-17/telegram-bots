@@ -29,12 +29,12 @@ public class Bot extends TelegramLongPollingBot {
     private static final Logger logger = LoggerFactory.getLogger(Bot.class);
     private final BotConfig config;
 
-    // Using deprecated constructor for compatibility with current Telegram Bots API version
-    // TODO: Update to new constructor when upgrading to newer API version
+    // Updated constructor for newer Telegram Bots API version (6.9.7.1)
+    // Token is passed to superclass constructor, no deprecated method overrides needed
     public Bot() {
         super(getBotTokenFromConfig());
         this.config = new BotConfig();
-        logger.info("Bot initialized with token: {}...", config.botToken.substring(0, 10));
+        logger.info("Bot initialized with token: {}...", getBotTokenFromConfig().substring(0, 10));
     }
 
     private static String getBotTokenFromConfig() {
@@ -48,11 +48,6 @@ public class Bot extends TelegramLongPollingBot {
     @Override
     public String getBotUsername() {
         return config.botUsername;
-    }
-
-    @Override
-    public String getBotToken() {
-        return config.botToken;
     }
 
     @Override

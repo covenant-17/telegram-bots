@@ -35,15 +35,13 @@ class BotTest {
     }
 
     @Test
-    @DisplayName("Should have username and token methods")
+    @DisplayName("Should have username method")
     void testBotMethodsExist() {
         if (bot != null) {
             assertDoesNotThrow(() -> {
                 String username = bot.getBotUsername();
-                String token = bot.getBotToken();
-                // Just verify that methods don't throw exceptions
+                // Verify that username method doesn't throw exceptions
                 assertNotNull(username);
-                assertNotNull(token);
             });
         }
     }

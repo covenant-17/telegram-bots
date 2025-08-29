@@ -11,7 +11,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <telegrambots.version>6.8.0</telegrambots.version>
+        <telegrambots.version>6.9.7.1</telegrambots.version>
         <slf4j.version>2.0.13</slf4j.version>
         <junit.jupiter.version>5.10.2</junit.jupiter.version>
         <mockito.inline.version>4.11.0</mockito.inline.version>
@@ -254,6 +254,20 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            
+            <!-- Maven Compiler Plugin with deprecation warnings -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <compilerArgs>
+                        <arg>-Xlint:deprecation</arg>
+                    </compilerArgs>
+                </configuration>
             </plugin>
         </plugins>
     </build>
