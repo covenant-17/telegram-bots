@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Дополнительные edge-case тесты для YtDlpService
+ * Additional edge-case tests for YtDlpService
  */
 class YtDlpServiceEdgeCaseTest {
 

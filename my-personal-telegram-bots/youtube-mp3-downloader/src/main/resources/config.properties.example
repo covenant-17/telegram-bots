@@ -1,9 +1,7 @@
 # Telegram Bot Configuration
 # Get your bot token from @BotFather on Telegram
 bot.token=YOUR_BOT_TOKEN_HERE
-
-# Your bot username (without @)
-bot.username=your_bot_username
+bot.username=audio_grabber_r_bot
 
 # Tool paths (default commands, will use PATH if available)
 # These work if tools are in your system PATH

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.condition.OS;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Тесты для класса SystemProcessRunner
+ * Tests for SystemProcessRunner class
  */
 class SystemProcessRunnerTest {
     

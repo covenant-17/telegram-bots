@@ -14,9 +14,9 @@ public class FileNameSanitizer {
      * Rules:
      * - Remove garbage tags (z2.fm, official, lyric, kbps, etc.)
      * - Remove special characters (#, &, ;, quotes, brackets, commas)
-     * - Приводят к красивому виду (убирают двойные пробелы, подчёркивания, дефисы)
-     * - Заменяют html- и unicode-апострофы на обычный '
-     * - Оставляют только полезную информацию (исполнитель, название)
+     * - Clean up formatting (remove double spaces, underscores, dashes)
+     * - Replace html and unicode apostrophes with regular '
+     * - Keep only useful information (artist, title)
      */
     private static final Map<Pattern, String> rules = new LinkedHashMap<>();
     static {
@@ -50,7 +50,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("\\)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile(","), "");
         rules.put(Pattern.compile("/"), " ");
-        // URL-encoded characters - декодируем основные
+        // URL-encoded characters - decode main ones
         rules.put(Pattern.compile("%20"), " "); // Decode space
         rules.put(Pattern.compile("%[0-9A-Fa-f]{2}"), ""); // Remove other encoded
         // Special characters and symbols that need cleaning
@@ -61,7 +61,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("!+"), "");
         rules.put(Pattern.compile("\\.{2,}"), "");
         rules.put(Pattern.compile("\\?{2,}"), " ");
-        rules.put(Pattern.compile("\\p{Cntrl}"), " "); // Заменяем управляющие символы на пробел
+        rules.put(Pattern.compile("\\p{Cntrl}"), " "); // Replace control characters with space
     }
 
     public static String sanitize(String fileName) {
@@ -71,17 +71,17 @@ public class FileNameSanitizer {
         for (Map.Entry<Pattern, String> entry : rules.entrySet()) {
             result = entry.getKey().matcher(result).replaceAll(entry.getValue());
         }
-        result = result.replaceAll("mp3$", ""); // убираем mp3 без точки в конце
-        result = result.replaceAll("\\.mp3$", ""); // убираем .mp3 в конце
+        result = result.replaceAll("mp3$", ""); // remove mp3 without dot at the end
+        result = result.replaceAll("\\.mp3$", ""); // remove .mp3 at the end
         result = result.replaceAll("\\s+", " ").trim();
         result = result.replaceAll("\\s*'\\s*", "'");
-        result = result.replaceAll("\\s*\\.+\\s*$", ""); // убираем точки в конце строки
+        result = result.replaceAll("\\s*\\.+\\s*$", ""); // remove dots at the end of string
         result = capitalizeWords(result);
         return result;
     }
 
     /**
-     * Делает каждое слово с большой буквы, остальные буквы маленькие
+     * Capitalizes each word, other letters become lowercase
      */
     private static String capitalizeWords(String input) {
         if (input == null || input.isEmpty())
@@ -100,10 +100,9 @@ public class FileNameSanitizer {
     }
 
     /**
-     * Формирует итоговое имя файла mp3.
-     * Если title уже содержит channel (или channel пустой), возвращает только
-     * title.
-     * Иначе возвращает "channel - title".
+     * Composes final mp3 file name.
+     * If title already contains channel (or channel is empty), returns only title.
+     * Otherwise returns "channel - title".
      */
     public static String composeFileName(String channel, String title) {
         if (title == null)
@@ -118,14 +117,12 @@ public class FileNameSanitizer {
     }
 
     /**
-     * Массовое переименование файлов в папке по правилам санитайзера.
-     * Переименовывает все файлы (по умолчанию только .mp3) в указанной директории.
-     * 
-     * @param dirPath   путь к папке
-     * @param extension фильтр по расширению (например, ".mp3"), если null — все
-     *                  файлы
-     * @param dryRun    если true — только выводит, что будет переименовано, без
-     *                  изменений
+     * Bulk rename files in directory according to sanitizer rules.
+     * Renames all files (by default only .mp3) in the specified directory.
+     *
+     * @param dirPath   path to directory
+     * @param extension filter by extension (e.g., ".mp3"), if null - all files
+     * @param dryRun    if true - only shows what will be renamed, without changes
      */
     public static void sanitizeAllInDirectory(String dirPath, String extension, boolean dryRun) {
         File dir = new File(dirPath);

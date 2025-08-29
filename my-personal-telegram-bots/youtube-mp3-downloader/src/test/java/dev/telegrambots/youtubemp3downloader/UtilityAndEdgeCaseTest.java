@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Комплексные тесты для различных утилитарных сценариев
+ * Comprehensive tests for various utility scenarios
  */
 class UtilityAndEdgeCaseTest {
 

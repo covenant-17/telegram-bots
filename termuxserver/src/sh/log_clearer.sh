@@ -1,10 +1,10 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Очищает все логи в директории LOG_DIR
+# Clears all logs in LOG_DIR directory
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 
 if [ -d "$LOG_DIR" ]; then
   find "$LOG_DIR" -type f -name "*.log" -exec truncate -s 0 {} \;
-  echo "Логи очищены в $LOG_DIR"
+  echo "Logs cleared in $LOG_DIR"
 else
-  echo "Директория логов не найдена: $LOG_DIR"
+  echo "Log directory not found: $LOG_DIR"
 fi

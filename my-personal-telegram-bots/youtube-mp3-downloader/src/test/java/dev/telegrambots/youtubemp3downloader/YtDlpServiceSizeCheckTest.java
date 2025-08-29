@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assumptions;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Тесты для проверки размера видео и длительности до скачивания
+ * Tests for checking video size and duration before download
  */
 class YtDlpServiceSizeCheckTest {
     private YtDlpService service;

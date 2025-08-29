@@ -66,11 +66,11 @@ class YtDlpServiceExtendedTest {
     @DisplayName("Should handle null file parameter")
     void testIsFileSizeWithinLimitNullFile() {
         assertDoesNotThrow(() -> {
-            service.isFileSizeWithinLimit(null); // убран result, чтобы не было warning
+            service.isFileSizeWithinLimit(null); // removed result to avoid warning
         });
     }
 
-    // === Тесты продолжительности ===
+    // === Duration tests ===
     @Test
     @DisplayName("Should return true for duration within limit")
     void testIsDurationWithinLimitValid() {
@@ -97,7 +97,7 @@ class YtDlpServiceExtendedTest {
         assertFalse(service.isDurationWithinLimit(maxDurationMinutes * 60 + 1)); // 1 second over limit
     }
 
-    // === Тесты удаления файлов ===
+    // === File deletion tests ===
     @Test
     @DisplayName("Should delete existing file")
     void testDeleteFileIfExistsExistingFile() throws Exception {
@@ -137,7 +137,7 @@ class YtDlpServiceExtendedTest {
         assertDoesNotThrow(() -> service.deleteFileIfExists(dir));
     }
 
-    // === Тесты получения информации о видео ===
+    // === Video information tests ===
     @Test
     @DisplayName("Should handle invalid YouTube URL")
     void testGetVideoInfoInvalidUrl() {
@@ -198,7 +198,7 @@ class YtDlpServiceExtendedTest {
         });
     }
 
-    // === Тесты загрузки аудио ===
+    // === Audio download tests ===
     @Test
     @DisplayName("Should handle download with invalid URL")
     void testDownloadAudioWithThumbnailInvalidUrl() {
@@ -229,11 +229,11 @@ class YtDlpServiceExtendedTest {
         Assumptions.assumeTrue(ytDlpExists, "yt-dlp not found in PATH, skipping test");
         String invalidPath = "/root/invalid/path/test.mp3";
         assertDoesNotThrow(() -> {
-            service.downloadAudioWithThumbnail("https://youtu.be/dQw4w9WgXcQ", invalidPath); // убран result, чтобы не было warning
+            service.downloadAudioWithThumbnail("https://youtu.be/dQw4w9WgXcQ", invalidPath); // removed result to avoid warning
         });
     }
 
-    // === Тесты получения продолжительности аудио ===
+    // === Audio duration tests ===
     @Test
     @DisplayName("Should handle non-existent audio file for duration")
     void testGetAudioDurationSecondsNonExistentFile() {
@@ -284,7 +284,7 @@ class YtDlpServiceExtendedTest {
         });
     }
 
-    // === Тесты конфигурации сервиса ===
+    // === Service configuration tests ===
     @Test
     @DisplayName("Should handle service with different limits")
     void testServiceWithDifferentLimits() {
