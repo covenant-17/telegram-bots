@@ -1,4 +1,4 @@
-﻿#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # Script for running both converter-bot and fileconverter bots in Termux
 
 # Kill previous bot processes using external script
@@ -12,7 +12,7 @@ trap '. ~/termuxserver/src/sh/kill_bots.sh; exit' INT
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 mkdir -p "$LOG_DIR"
 
-# converter bot  
+# converter bot
 CONVERTER_JAR="/data/data/com.termux/files/home/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
 CONVERTER_LOG="$LOG_DIR/converter-bot.log"
 CONVERTER_ERR="$LOG_DIR/converter-bot-error.log"

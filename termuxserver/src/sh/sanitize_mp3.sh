@@ -1,4 +1,4 @@
-﻿#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # Script for bulk renaming mp3 files via FileNameSanitizerCli
 # Usage: ./sanitize_mp3.sh <folder> [extension] [dryRun]
 # Example: ./sanitize_mp3.sh termuxserver/youtube_mp3_downloader_workzone .mp3 true
