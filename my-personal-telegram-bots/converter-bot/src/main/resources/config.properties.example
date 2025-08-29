@@ -1,0 +1,23 @@
+# Telegram Bot Configuration
+# Get your bot token from @BotFather on Telegram
+bot.token=YOUR_BOT_TOKEN_HERE
+
+# Your bot username (without @)
+bot.username=your_bot_username
+
+# Tool paths (default commands, will use PATH if available)
+# This works if ffmpeg is in your system PATH
+ffmpeg.path=ffmpeg
+
+# File size and duration limits
+# Maximum file size in bytes (default: 50MB)
+max.filesize=52428800
+
+# Maximum video duration in minutes (default: 10 minutes)
+max.duration=10.0
+
+# Configuration Instructions:
+# 1. Copy this file to config.properties
+# 2. Replace YOUR_BOT_TOKEN_HERE with your actual bot token from @BotFather
+# 3. Update bot.username with your bot's username
+# 4. Adjust paths if your tools are installed in custom locations

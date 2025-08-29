@@ -47,7 +47,7 @@ public class Bot extends TelegramLongPollingBot {
         org.telegram.telegrambots.meta.api.methods.send.SendAudio sendAudio = new org.telegram.telegrambots.meta.api.methods.send.SendAudio();
         sendAudio.setChatId(chatId);
         sendAudio.setAudio(new org.telegram.telegrambots.meta.api.objects.InputFile(audioFile));
-        sendAudio.setCaption("Ваше аудио готово!");
+        sendAudio.setCaption("Your audio is ready!");
         try {
             execute(sendAudio);
         } catch (TelegramApiException e) {
@@ -62,7 +62,7 @@ public class Bot extends TelegramLongPollingBot {
         if (caption != null) {
             sendAudio.setCaption(caption);
         } else {
-            sendAudio.setCaption("Ваше аудио готово!");
+            sendAudio.setCaption("Your audio is ready!");
         }
         try {
             execute(sendAudio);
