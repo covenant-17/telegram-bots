@@ -9,6 +9,12 @@ yt-dlp.path=yt-dlp
 ffmpeg.path=ffmpeg
 ffprobe.path=ffprobe
 
+# Unix/Linux-specific absolute paths (uncomment and modify if needed)
+# Use these if tools are not in PATH or you want specific versions
+# yt-dlp.path.unix=/usr/local/bin/yt-dlp
+# ffmpeg.path.unix=/usr/bin/ffmpeg
+# ffprobe.path.unix=/usr/bin/ffprobe
+
 # Windows-specific absolute paths (uncomment and modify if needed)
 # Use these if tools are not in PATH or you want specific versions
 # yt-dlp.path.win=C:/path/to/your/Tools/yt-dlp/yt-dlp.exe
@@ -29,5 +35,8 @@ max.parallel.downloads=1
 # 1. Copy this file to config.properties
 # 2. Replace YOUR_BOT_TOKEN_HERE with your actual bot token from @BotFather
 # 3. Update bot.username with your bot's username
-# 4. Adjust paths if your tools are installed in custom locations
+# 4. Adjust paths if your tools are installed in custom locations:
+#    - For Windows: uncomment and modify .win properties
+#    - For Unix/Linux: uncomment and modify .unix properties
+#    - Or set environment variables: YT_DLP_PATH, FFMPEG_PATH, FFPROBE_PATH
 # 5. Modify limits based on your server capabilities and requirements
