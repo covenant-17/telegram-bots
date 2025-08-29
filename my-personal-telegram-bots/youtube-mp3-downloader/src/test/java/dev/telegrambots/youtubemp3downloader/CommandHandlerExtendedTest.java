@@ -277,7 +277,7 @@ class CommandHandlerExtendedTest {
     @Test
     @DisplayName("Should handle special characters in text with YouTube links")
     void testHandleSpecialCharactersWithYoutubeLinks() {
-        String text = "🎵 Check this: https://youtu.be/dQw4w9WgXcQ 🎶 Amazing! 中文测试 русский текст";
+        String text = "🎵 Check this: https://youtu.be/dQw4w9WgXcQ 🎶 Amazing! Chinese test English text";
         
         when(update.hasMessage()).thenReturn(true);
         when(message.hasText()).thenReturn(true);

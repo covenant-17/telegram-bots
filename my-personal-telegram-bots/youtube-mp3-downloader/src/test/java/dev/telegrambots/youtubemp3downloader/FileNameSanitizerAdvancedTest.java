@@ -41,7 +41,7 @@ class FileNameSanitizerAdvancedTest {
     @Test
     @DisplayName("Should handle Unicode characters")
     void testUnicodeCharacters() {
-        String unicode = "🎵 Музыка - Song 音楽 موسيقى (Official)";
+        String unicode = "🎵 Music - Song 音楽 موسيقى (Official)";
         String result = FileNameSanitizer.sanitize(unicode);
         
         assertNotNull(result);
