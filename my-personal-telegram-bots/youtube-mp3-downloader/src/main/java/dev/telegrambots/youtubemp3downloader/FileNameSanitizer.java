@@ -42,7 +42,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("lyrics?", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("clip officiel", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("clip", Pattern.CASE_INSENSITIVE), "");
-        rules.put(Pattern.compile("премьера песни", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("song premiere", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("dark techno ebm industrial type", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("topic", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("2025", Pattern.CASE_INSENSITIVE), "");
