@@ -231,7 +231,7 @@ public class CommandHandler {
                 } else {
                     logger.warn("[{}] Non-JSON response received. Attempting fallback processing.", now());
                     telegram.sendText(Long.valueOf(chatId), "[WARNING ⚠️] Metadata could not be parsed, but we will attempt to process the audio.");
-                    telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT); // Продолжаем крутить лоудер
+                    telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT); // Continue showing loader
                     // Continue processing without metadata
                 }
             } else {
@@ -243,16 +243,16 @@ public class CommandHandler {
         } catch (Exception e) {
             logger.error("[{}] Exception during metadata check for URL: {}", now(), url, e);
         } finally {
-            sending[0] = false; // Завершаем поток статуса загрузки
+            sending[0] = false; // Stop the progress thread
             logger.debug("[{}] Stopping progress thread for chatId: {}", now(), chatId);
             try {
-                progressThread.join(); // Дожидаемся завершения потока
+                progressThread.join(); // Wait for the thread to finish
                 logger.debug("[{}] Progress thread joined successfully for chatId: {}", now(), chatId);
             } catch (InterruptedException e) {
                 logger.warn("[{}] Progress thread interrupted for chatId: {}", now(), chatId, e);
                 Thread.currentThread().interrupt();
             }
-            // Отправляем финальный статус
+            // Send final status
             logger.debug("[{}] Sending final chat action for chatId: {}", now(), chatId);
         }
 
@@ -354,7 +354,7 @@ public class CommandHandler {
             msg.append("\uD83C\uDFB5 Song renamed\n");
             msg.append("\uD83D\uDD22 Before: ").append(beforeName).append("\n");
             msg.append("\uD83D\uDD01 After:  ").append(afterName);
-            msg.append("\n🔗 YouTube: ").append(url); // Добавляем ссылку на YouTube
+            msg.append("\n🔗 YouTube: ").append(url); // Add YouTube link
             if (fallbackUsed) {
                 msg.append("\n\nTitle taken from <title> tag of YouTube page (curl fallback)");
             }
@@ -374,9 +374,9 @@ public class CommandHandler {
             String errMsg = "[ERROR ☢️☣️] An unexpected error occurred: (" + index + "/" + total + ")\nURL: " + url + " ❌";
             telegram.sendText(message.getChatId(), errMsg);
         } finally {
-            sending[0] = false; // Завершаем поток статуса загрузки
+            sending[0] = false; // Stop the progress thread
             try {
-                progressThread.join(); // Дожидаемся завершения потока
+                progressThread.join(); // Wait for the thread to finish
             } catch (InterruptedException e) {
                 logger.warn("[{}] Progress thread interrupted: {}", now(), e.getMessage(), e);
                 Thread.currentThread().interrupt();

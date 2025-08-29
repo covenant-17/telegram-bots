@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Расширенные тесты для CommandHandler с покрытием edge-cases и ошибочных сценариев
+ * Extended tests for CommandHandler with edge-cases and error scenarios coverage
  */
 class CommandHandlerExtendedTest {
     @Mock
@@ -183,7 +183,7 @@ class CommandHandlerExtendedTest {
             when(message.hasText()).thenReturn(true);
             when(message.getText()).thenReturn(url);
             boolean result = CommandHandler.handle(bot, update);
-            assertNotNull(result); // Просто проверяем, что не null
+            assertNotNull(result); // Just verify that result is not null
         }
     }
 
