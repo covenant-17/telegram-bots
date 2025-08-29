@@ -4,22 +4,41 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+
+// Third-party libraries
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+// Telegram Bots API - Core functionality
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+
+// Telegram API Objects
 import org.telegram.telegrambots.meta.api.objects.Document;
 import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+// Logging framework
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Custom Telegram Bot for converting WebM/GIF files to MP4 format.
+ * This implementation provides file conversion functionality with enhanced error handling.
+ *
+ * @author Your Name
+ * @version 1.0
+ * @since 2025-08-29
+ */
 public class ConverterBot extends TelegramLongPollingBot {
 
+  private static final Logger logger = LoggerFactory.getLogger(ConverterBot.class);
   private final BotConfig config;
 
   @SuppressWarnings("deprecation") // Suppress deprecation warning for constructor
@@ -41,91 +60,102 @@ public class ConverterBot extends TelegramLongPollingBot {
 
   @Override
   public void onUpdateReceived(Update update) {
-    if (update.hasMessage()) {
-      Message message = update.getMessage();
-      if (message.hasText() && "/start".equals(message.getText())) {
-        // Welcome message
-        String welcome = "[SUCCESS ✅] " + getRandomText(
-          "welcome",
-          "bot_texts_welcome.json"
-        ) + " 👋";
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(message.getChatId().toString());
-        sendMessage.setText(welcome);
-        try {
-          execute(sendMessage);
-        } catch (Exception ignored) {}
-        return;
-      }
-      if (message.hasDocument()) {
-        Document document = message.getDocument();
-        String fileName = document.getFileName();
-        if (
-          fileName != null &&
-          (fileName.endsWith(".webm") || fileName.endsWith(".gif"))
-        ) {
-          try {
-            System.out.println("[bot] File received: " + fileName);
-            // Show typing indicator
-            SendChatAction loader = new SendChatAction();
-            loader.setChatId(message.getChatId().toString());
-            loader.setAction(ActionType.UPLOADDOCUMENT);
-            execute(loader);
-            // Download file
-            File file = execute(new GetFile(document.getFileId()));
-            java.io.File inputFile = downloadFile(file.getFilePath());
-            System.out.println(
-              "[bot] Start conversion: " + inputFile.getAbsolutePath()
-            );
-            // Convert to mp4
-            java.io.File mp4File = convertToMp4(inputFile, fileName);
-            System.out.println(
-              "[bot] Conversion finished: " + mp4File.getAbsolutePath()
-            );
-            // Send result back
-            SendDocument sendDocument = new SendDocument();
-            sendDocument.setChatId(message.getChatId().toString());
-            sendDocument.setDocument(new InputFile(mp4File));
-            // Success message
-            String doneMsg = "[SUCCESS ✅] " + getRandomText(
-              "done",
-              "bot_texts_done.json"
-            ) + " 🎬";
-            sendDocument.setCaption(doneMsg); // File caption
-            execute(sendDocument);
-            System.out.println("[bot] MP4 sent to user.");
-            // Clean up temporary files
-            inputFile.delete();
-            mp4File.delete();
-            // Stop typing indicator
-            SendChatAction done = new SendChatAction();
-            done.setChatId(message.getChatId().toString());
-            done.setAction(ActionType.TYPING);
-            execute(done);
-          } catch (Exception e) {
-            System.out.println("[bot] Error during conversion.");
-            e.printStackTrace();
-            SendMessage errorMsg = new SendMessage();
-            errorMsg.setChatId(message.getChatId().toString());
-            errorMsg.setText("[ERROR ☢️☣️] An error occurred during file conversion. Please try again. ❌");
-            try {
-              execute(errorMsg);
-            } catch (Exception ignored) {}
-          }
-        } else {
-          // Unsupported file type
-          String wrongTypeMsg = "[ERROR ☢️☣️] " + getRandomText(
-            "wrongtype",
-            "bot_texts_wrongtype.json"
-          ) + " 🚫";
-          SendMessage wrongTypeMessage = new SendMessage();
-          wrongTypeMessage.setChatId(message.getChatId().toString());
-          wrongTypeMessage.setText(wrongTypeMsg);
-          try {
-            execute(wrongTypeMessage);
-          } catch (Exception ignored) {}
+    // Custom update processing with enhanced error handling for ConverterBot
+    try {
+      if (update.hasMessage()) {
+        Message message = update.getMessage();
+        if (message.hasText() && "/start".equals(message.getText())) {
+          handleStartCommand(message);
+          return;
+        }
+        if (message.hasDocument()) {
+          handleDocument(message);
+          return;
         }
       }
+    } catch (Exception e) {
+      logger.error("Critical error in ConverterBot update processing: {}", e.getMessage(), e);
+      // Send error message to user if possible
+      if (update.hasMessage()) {
+        sendErrorMessage(update.getMessage().getChatId(), "An error occurred while processing your request. Please try again.");
+      }
+    }
+  }
+
+  private void handleStartCommand(Message message) {
+    try {
+      String welcome = "[SUCCESS ✅] " + getRandomText(
+        "welcome",
+        "bot_texts_welcome.json"
+      ) + " 👋";
+      SendMessage sendMessage = new SendMessage();
+      sendMessage.setChatId(message.getChatId().toString());
+      sendMessage.setText(welcome);
+      execute(sendMessage);
+    } catch (Exception e) {
+      logger.error("Error sending welcome message: {}", e.getMessage(), e);
+    }
+  }
+
+  private void handleDocument(Message message) {
+    Document document = message.getDocument();
+    String fileName = document.getFileName();
+    
+    if (fileName == null || (!fileName.endsWith(".webm") && !fileName.endsWith(".gif"))) {
+      sendErrorMessage(message.getChatId(), "Please send a .webm or .gif file to convert.");
+      return;
+    }
+
+    try {
+      System.out.println("[bot] File received: " + fileName);
+      
+      // Show typing indicator
+      SendChatAction loader = new SendChatAction();
+      loader.setChatId(message.getChatId().toString());
+      loader.setAction(ActionType.UPLOADDOCUMENT);
+      execute(loader);
+      
+      // Download file
+      File file = execute(new GetFile(document.getFileId()));
+      java.io.File inputFile = downloadFile(file.getFilePath());
+      System.out.println("[bot] Start conversion: " + inputFile.getAbsolutePath());
+      
+      // Convert to mp4
+      java.io.File mp4File = convertToMp4(inputFile, fileName);
+      logger.info("Conversion finished: {}", mp4File.getAbsolutePath());
+      
+      // Send result back
+      SendDocument sendDocument = new SendDocument();
+      sendDocument.setChatId(message.getChatId().toString());
+      sendDocument.setDocument(new InputFile(mp4File));
+      
+      // Success message
+      String doneMsg = "[SUCCESS ✅] " + getRandomText(
+        "done",
+        "bot_texts_done.json"
+      ) + " 🎬";
+      sendDocument.setCaption(doneMsg);
+      execute(sendDocument);
+      
+      logger.info("MP4 sent to user: {}", message.getChatId());
+      
+      // Clean up temporary files
+      if (!inputFile.delete()) {
+        logger.warn("Failed to delete temporary input file: {}", inputFile.getAbsolutePath());
+      }
+      if (!mp4File.delete()) {
+        logger.warn("Failed to delete temporary output file: {}", mp4File.getAbsolutePath());
+      }
+      
+      // Stop typing indicator
+      SendChatAction done = new SendChatAction();
+      done.setChatId(message.getChatId().toString());
+      done.setAction(ActionType.TYPING);
+      execute(done);
+      
+    } catch (Exception e) {
+      logger.error("Error during file conversion for user {}: {}", message.getChatId(), e.getMessage(), e);
+      sendErrorMessage(message.getChatId(), "[ERROR ☢️☣️] An error occurred during file conversion. Please try again. ❌");
     }
   }
 
@@ -192,6 +222,17 @@ public class ConverterBot extends TelegramLongPollingBot {
       } else {
         return "Message not found.";
       }
+    }
+  }
+
+  private void sendErrorMessage(Long chatId, String message) {
+    try {
+      SendMessage errorMessage = new SendMessage();
+      errorMessage.setChatId(chatId.toString());
+      errorMessage.setText(message);
+      execute(errorMessage);
+    } catch (Exception e) {
+      logger.error("Error sending error message: {}", e.getMessage(), e);
     }
   }
 }

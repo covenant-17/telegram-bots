@@ -1,4 +1,4 @@
-package main.java.dev.telegrambots.shared;
+package dev.telegrambots.shared;
 
 import java.util.ResourceBundle;
 
@@ -27,10 +27,22 @@ public abstract class BaseBotConfig {
      */
     protected BaseBotConfig() {
         this.config = ResourceBundle.getBundle("config");
+        
+        // Validate required configuration
+        validateConfiguration();
 
         // Common file limits
         this.maxFileSize = getLongProperty("max.filesize", 50 * 1024 * 1024L);
         this.maxDurationMinutes = getDoubleProperty("max.duration", 10.0);
+    }
+
+    /**
+     * Validates that required configuration properties are present.
+     * Subclasses can override this method to add their own validation.
+     */
+    protected void validateConfiguration() {
+        // Base validation - subclasses should call super.validateConfiguration()
+        // and add their specific validations
     }
 
     /**

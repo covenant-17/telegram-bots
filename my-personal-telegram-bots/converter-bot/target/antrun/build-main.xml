@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="maven-antrun-" default="main">
-  <target name="main">
-    <copy file="C:\!Dev\my-personal-telegram-bots\converter-bot\target/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar" tofile="C:/!Dev/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar" />
-  </target>
-</project>
