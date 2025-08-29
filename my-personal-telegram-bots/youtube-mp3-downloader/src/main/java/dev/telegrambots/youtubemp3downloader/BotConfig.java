@@ -28,10 +28,10 @@ public class BotConfig {
             this.ffmpegPath = resolvePath(config, "ffmpeg.path.win", "FFMPEG_PATH", "ffmpeg");
             this.ffprobePath = resolvePath(config, "ffprobe.path.win", "FFPROBE_PATH", "ffprobe");
         } else {
-            // Unix/Linux path resolution
-            this.ytDlpPath = config.containsKey("yt-dlp.path") ? config.getString("yt-dlp.path") : "yt-dlp";
-            this.ffmpegPath = config.containsKey("ffmpeg.path") ? config.getString("ffmpeg.path") : "ffmpeg";
-            this.ffprobePath = config.containsKey("ffprobe.path") ? config.getString("ffprobe.path") : "ffprobe";
+            // Unix/Linux path resolution with fallbacks
+            this.ytDlpPath = resolvePath(config, "yt-dlp.path.unix", "YT_DLP_PATH", "yt-dlp");
+            this.ffmpegPath = resolvePath(config, "ffmpeg.path.unix", "FFMPEG_PATH", "ffmpeg");
+            this.ffprobePath = resolvePath(config, "ffprobe.path.unix", "FFPROBE_PATH", "ffprobe");
         }
 
         // File size limit in bytes (default: 50MB)
