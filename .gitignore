@@ -33,16 +33,16 @@ config/
 *.exe
 *.dll
 
-# Учебный код (опционально)
+# Educational code (optional)
 Files/Java/
 
-# Tools (оставляем путь, игнорируем файлы, кроме .md)
+# Tools (keep path, ignore files except .md)
 Tools/*
 !Tools/*.md
 
-# .vscode (пушим полезные настройки, но игнорируем личные)
-.vscode/sftp.json  # содержит личные ключи/пароли
+# .vscode (push useful settings, but ignore personal)
+.vscode/sftp.json  # contains personal keys/passwords
 
-# Дополнительные игноры
+# Additional ignores
 Any files/
 .tmp.driveupload/
