@@ -7,6 +7,8 @@ import dev.telegrambots.shared.BaseBotConfig;
  * Handles tool paths, file limits, and parallel download settings.
  */
 public class BotConfig extends BaseBotConfig {
+    public final String botToken;
+    public final String botUsername;
     public final String ytDlpPath;
     public final String ffmpegPath;
     public final String ffprobePath;
@@ -18,6 +20,11 @@ public class BotConfig extends BaseBotConfig {
      */
     public BotConfig() {
         super();
+        
+        // Bot credentials
+        this.botToken = getStringProperty("bot.token", "");
+        this.botUsername = getStringProperty("bot.username", "");
+        
         String os = System.getProperty("os.name").toLowerCase();
 
         if (os.contains("win")) {
@@ -34,5 +41,17 @@ public class BotConfig extends BaseBotConfig {
 
         // Maximum parallel downloads (default: 3)
         this.maxParallelDownloads = getIntProperty("max.parallel.downloads", 3);
+    }
+    
+    @Override
+    protected void validateConfiguration() {
+        super.validateConfiguration();
+        
+        if (botToken == null || botToken.trim().isEmpty()) {
+            throw new IllegalStateException("Bot token is required in config.properties (bot.token)");
+        }
+        if (botUsername == null || botUsername.trim().isEmpty()) {
+            throw new IllegalStateException("Bot username is required in config.properties (bot.username)");
+        }
     }
 }
