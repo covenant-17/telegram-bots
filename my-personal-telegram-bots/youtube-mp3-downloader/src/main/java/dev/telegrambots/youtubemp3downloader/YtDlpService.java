@@ -171,7 +171,7 @@ public class YtDlpService {
             }
 
             if (ffmpegExit == 0) {
-                // После успешной вшивки/rename копируем tempFile (или outWithCover) в termuxserver/youtube_mp3_downloader_workzone с финальным именем
+                // After successful embedding/rename, copy tempFile (or outWithCover) to termuxserver/youtube_mp3_downloader_workzone with final name
                 File saveDir = new File("termuxserver/youtube_mp3_downloader_workzone");
                 if (!saveDir.exists()) saveDir.mkdirs();
                 File finalFile = new File(saveDir, baseName + ".mp3");
@@ -180,7 +180,7 @@ public class YtDlpService {
                 java.nio.file.Files.copy(sourceMp3.toPath(), finalFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 logger.info("[{}] File saved to: {}", now(), finalFile.getAbsolutePath());
             }
-            // Удаляем thumbnail
+            // Delete thumbnail
             thumbFile.delete();
             new File(outWithCover).delete(); // if rename failed
         }

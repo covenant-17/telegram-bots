@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Тесты для CommandHandler с базовыми сценариями обработки сообщений
+ * Tests for CommandHandler with basic message processing scenarios
  */
 class CommandHandlerTest {
     @Mock

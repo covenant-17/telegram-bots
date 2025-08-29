@@ -36,7 +36,7 @@ class YtDlpServiceTest {
 
     @Test
     void testGetVideoInfoInvalidUrl() {
-        // Пропустить тест, если yt-dlp не найден
+        // Skip test if yt-dlp not found in PATH
         boolean ytDlpExists = isExecutableOnPath(ytDlpPath);
         Assumptions.assumeTrue(ytDlpExists, "yt-dlp not found in PATH, skipping test");
         assertDoesNotThrow(() -> {

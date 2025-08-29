@@ -48,7 +48,7 @@ class FileNameSanitizerTest {
 
     @Test
     void testSanitizeRemovesUnderscores() {
-        assertEquals("Крыли Самозанятый L", FileNameSanitizer.sanitize("Крыли_Самозанятый_L_Премьера_Песни_2025.mp3"));
+        assertEquals("Test Artist Song", FileNameSanitizer.sanitize("Test_Artist_Song_Premiere_2025.mp3"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test__Name"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test___Name"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test_Name"));

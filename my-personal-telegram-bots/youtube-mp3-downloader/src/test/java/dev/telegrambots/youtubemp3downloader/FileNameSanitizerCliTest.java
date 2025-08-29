@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Тесты для класса FileNameSanitizerCli
+ * Tests for FileNameSanitizerCli class
  */
 class FileNameSanitizerCliTest {
     

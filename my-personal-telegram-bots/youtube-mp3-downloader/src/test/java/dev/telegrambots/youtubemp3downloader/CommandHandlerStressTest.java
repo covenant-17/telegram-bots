@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Стресс-тесты и edge-cases для CommandHandler
+ * Stress tests and edge-cases for CommandHandler
  */
 class CommandHandlerStressTest {
 

@@ -84,7 +84,7 @@ class YtDlpServiceEdgeCaseTest {
     @Test
     @DisplayName("Should handle service with negative limits")
     void testServiceWithNegativeLimits() {
-        // Тест полностью отключён как ненужный, чтобы не мешал CI/CD
+        // Test completely disabled as unnecessary to avoid interfering with CI/CD
     }
 
     @Test

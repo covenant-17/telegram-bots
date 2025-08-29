@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Disabled;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Тесты для класса Bot
- * Note: Некоторые тесты отключены из-за проблем с Mockito + Java 21
+ * Tests for Bot class
+ * Note: Some tests disabled due to Mockito + Java 21 compatibility issues
  */
 class BotTest {
     
@@ -16,18 +16,18 @@ class BotTest {
     
     @BeforeEach
     void setUp() {
-        // Инициализируем бота напрямую для простых тестов
+        // Initialize bot directly for simple tests
         try {
             bot = new Bot();
         } catch (Exception e) {
-            // Если не можем создать бота (нет конфига), пропускаем тесты
+            // If we can't create bot (no config), skip tests
         }
     }
 
     @Test
     @DisplayName("Should create bot instance")
     void testBotCreation() {
-        // Проверяем, что бот может быть создан без исключений
+        // Verify that bot can be created without exceptions
         assertDoesNotThrow(() -> {
             Bot testBot = new Bot();
             assertNotNull(testBot);
@@ -41,7 +41,7 @@ class BotTest {
             assertDoesNotThrow(() -> {
                 String username = bot.getBotUsername();
                 String token = bot.getBotToken();
-                // Просто проверяем, что методы не выбрасывают исключения
+                // Just verify that methods don't throw exceptions
                 assertNotNull(username);
                 assertNotNull(token);
             });
@@ -52,53 +52,53 @@ class BotTest {
     @Test
     @DisplayName("Should initialize bot with config values")
     void testBotInitialization() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }    @Disabled("Mockito compatibility issues with Java 21")
     @Test
     @DisplayName("Should handle update received")
     void testOnUpdateReceived() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }
 
     @Disabled("Mockito compatibility issues with Java 21")
     @Test
     @DisplayName("Should send text message successfully")
     void testSendTextMessage() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }
 
     @Disabled("Mockito compatibility issues with Java 21")
     @Test
     @DisplayName("Should send audio file successfully")
     void testSendAudioFile() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }
 
     @Disabled("Mockito compatibility issues with Java 21")
     @Test
     @DisplayName("Should send audio file with caption successfully")
     void testSendAudioFileWithCaption() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }
 
     @Disabled("Mockito compatibility issues with Java 21")
     @Test
     @DisplayName("Should send audio file with null caption")
     void testSendAudioFileWithNullCaption() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }
 
     @Disabled("Mockito compatibility issues with Java 21")
     @Test
     @DisplayName("Should send chat action successfully")
     void testSendChatAction() {
-        // Тест отключен из-за проблем с мокированием в Java 21
-        // TODO: Переписать без использования Mockito
+        // Test disabled due to Mockito compatibility issues with Java 21
+        // TODO: Rewrite without using Mockito
     }
 }

@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 /**
- * Реальная реализация ProcessRunner для запуска внешних процессов
+ * Real implementation of ProcessRunner for running external processes
  */
 public class SystemProcessRunner implements ProcessRunner {
     
