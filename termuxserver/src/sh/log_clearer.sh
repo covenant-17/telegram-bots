@@ -1,4 +1,4 @@
-﻿#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 # Clears all logs in LOG_DIR directory
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 
