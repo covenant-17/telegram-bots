@@ -15,7 +15,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Интеграционные тесты для YtDlpService с реальными файлами
+ * Integration tests for YtDlpService with real files
  */
 class YtDlpServiceFileIntegrationTest {
 

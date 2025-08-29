@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Расширенные интеграционные тесты ProcessRunner с различными edge-cases
+ * Advanced integration tests for ProcessRunner with various edge-cases
  */
 class ProcessRunnerAdvancedIntegrationTest {
 

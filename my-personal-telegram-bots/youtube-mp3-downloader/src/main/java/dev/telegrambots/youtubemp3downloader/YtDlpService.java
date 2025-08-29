@@ -126,9 +126,9 @@ public class YtDlpService {
         }
         thumbProc.waitFor();
 
-        // 3. Встраиваем thumbnail в mp3, если он скачан
+        // 3. Embed thumbnail into mp3 if downloaded
         File thumbFile = new File(thumbPath);
-        // Если thumbnail не найден, ищем любой jpg с нужным префиксом в папке temp_mp3
+        // If thumbnail not found, look for any jpg with the right prefix in temp_mp3 folder
         if (!thumbFile.exists()) {
             File[] jpgs = tempDir.listFiles((d, name) -> name.endsWith(".jpg") && name.startsWith(tempFileName.replace(".mp3", "")));
             if (jpgs != null && jpgs.length > 0) {
@@ -182,10 +182,10 @@ public class YtDlpService {
             }
             // Удаляем thumbnail
             thumbFile.delete();
-            new File(outWithCover).delete(); // если не удалось переименовать
+            new File(outWithCover).delete(); // if rename failed
         }
 
-        // Удаляем tempFile и все temp jpg после завершения
+        // Delete tempFile and all temp jpg after completion
         tempFile.delete();
         File[] tempJpgs = tempDir.listFiles((d, name) -> name.startsWith(baseName) && name.endsWith(".jpg"));
         if (tempJpgs != null) {

@@ -5,10 +5,10 @@
 . ~/termuxserver/src/sh/kill_bots.sh
 sleep 2
 
-# Обработчик SIGINT (CTRL+C)
+# SIGINT handler (CTRL+C)
 trap '. ~/termuxserver/src/sh/kill_bots.sh; exit' INT
 
-# Лог-папка
+# Log directory
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 mkdir -p "$LOG_DIR"
 
@@ -16,7 +16,7 @@ mkdir -p "$LOG_DIR"
 CONVERTER_JAR="/data/data/com.termux/files/home/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
 CONVERTER_LOG="$LOG_DIR/converter-bot.log"
 CONVERTER_ERR="$LOG_DIR/converter-bot-error.log"
-# # rt-file-converter-bot потушил, переехал жить в Серпстат.
+# # rt-file-converter-bot disabled, moved to Serpstat
 # FILECONVERTER_JAR="/data/data/com.termux/files/home/termuxserver/src/rt-file-converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
 # FILECONVERTER_LOG="$LOG_DIR/rt-file-converter-bot.log"
 # FILECONVERTER_ERR="$LOG_DIR/rt-file-converter-bot-error.log"

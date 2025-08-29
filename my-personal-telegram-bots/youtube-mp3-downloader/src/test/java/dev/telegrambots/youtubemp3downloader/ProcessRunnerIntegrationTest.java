@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Интеграционные тесты с мокированием ProcessRunner
+ * Integration tests with ProcessRunner mocking
  */
 class ProcessRunnerIntegrationTest {
     

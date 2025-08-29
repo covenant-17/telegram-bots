@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Скрипт для массового переименования mp3-файлов через FileNameSanitizerCli
-# Использование: ./sanitize_mp3.sh <папка> [расширение] [dryRun]
-# Пример: ./sanitize_mp3.sh termuxserver/youtube_mp3_downloader_workzone .mp3 true
+# Script for bulk renaming mp3 files via FileNameSanitizerCli
+# Usage: ./sanitize_mp3.sh <folder> [extension] [dryRun]
+# Example: ./sanitize_mp3.sh termuxserver/youtube_mp3_downloader_workzone .mp3 true
 
 JAR="$HOME/termuxserver/src/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar"
 MAIN_CLASS="dev.telegrambots.youtubemp3downloader.FileNameSanitizerCli"
