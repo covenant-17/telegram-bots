@@ -41,21 +41,24 @@ public class ConverterBot extends TelegramLongPollingBot {
   private static final Logger logger = LoggerFactory.getLogger(ConverterBot.class);
   private final BotConfig config;
 
-  @SuppressWarnings("deprecation") // Suppress deprecation warning for constructor
-  // TODO: Update to new constructor when upgrading to newer Telegram Bots API version
+  private static String getBotTokenFromConfig() {
+    try {
+      return java.util.ResourceBundle.getBundle("config").getString("bot.token");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to load bot token from config", e);
+    }
+  }
+
+  // Updated constructor for newer Telegram Bots API version (6.9.7.1)
+  // Token is passed to superclass constructor, no deprecated method overrides needed
   public ConverterBot() {
-    super();
+    super(getBotTokenFromConfig());
     this.config = new BotConfig();
   }
 
   @Override
   public String getBotUsername() {
     return config.botUsername;
-  }
-
-  @Override
-  public String getBotToken() {
-    return config.botToken;
   }
 
   @Override
