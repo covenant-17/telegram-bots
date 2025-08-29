@@ -28,7 +28,7 @@ YOUTUBE_MP3_DOWNLOADER_ERR="$LOG_DIR/youtube-mp3-downloader-error.log"
 # Starting the bots
 echo "Starting converter-bot..." >> "$CONVERTER_LOG"
 java -jar "$CONVERTER_JAR" >> "$CONVERTER_LOG" 2>> "$CONVERTER_ERR" &
-# echo "Starting fileconverter..." >> "$FILECONVERTER_LOG" #потушил, переехал жить в Серпстат.
+# echo "Starting fileconverter..." >> "$FILECONVERTER_LOG" #disabled, moved to Serpstat
 # java -jar "$FILECONVERTER_JAR" >> "$FILECONVERTER_LOG" 2>> "$FILECONVERTER_ERR" &
 echo "Starting youtube-mp3-downloader..." >> "$YOUTUBE_MP3_DOWNLOADER_LOG"
 java -jar "$YOUTUBE_MP3_DOWNLOADER_JAR" >> "$YOUTUBE_MP3_DOWNLOADER_LOG" 2>> "$YOUTUBE_MP3_DOWNLOADER_ERR" &

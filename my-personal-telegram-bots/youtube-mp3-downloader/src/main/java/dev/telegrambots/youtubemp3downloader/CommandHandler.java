@@ -38,7 +38,7 @@ public class CommandHandler {
             Message message = update.getMessage();
             String text = message.getText();
             
-            // Проверка на null text
+            // Check for null text
             if (text == null) {
                 return false;
             }
