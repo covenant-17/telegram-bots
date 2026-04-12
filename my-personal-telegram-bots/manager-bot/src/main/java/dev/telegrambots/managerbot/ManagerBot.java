@@ -56,7 +56,6 @@ public class ManagerBot extends TelegramLongPollingBot {
         long chatId = message.getChatId();
 
         if (!config.isAllowed(userId)) {
-            send(chatId, "⛔ Access denied.");
             return;
         }
 
