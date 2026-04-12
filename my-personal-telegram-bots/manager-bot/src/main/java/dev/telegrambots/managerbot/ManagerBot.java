@@ -42,6 +42,12 @@ public class ManagerBot extends TelegramLongPollingBot {
         this.config = new BotConfig();
     }
 
+    public void notifyStartup() {
+        for (long userId : config.allowedUserIds) {
+            send(userId, "✅ *manager\-bot* is up and running\.");
+        }
+    }
+
     @Override
     public String getBotUsername() {
         return config.botUsername;

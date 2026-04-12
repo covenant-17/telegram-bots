@@ -7,7 +7,9 @@ public class Main {
     public static void main(String[] args) {
         try {
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botsApi.registerBot(new ManagerBot());
+            ManagerBot bot = new ManagerBot();
+            botsApi.registerBot(bot);
+            bot.notifyStartup();
             System.out.println("Manager Bot started.");
         } catch (Exception e) {
             e.printStackTrace();
