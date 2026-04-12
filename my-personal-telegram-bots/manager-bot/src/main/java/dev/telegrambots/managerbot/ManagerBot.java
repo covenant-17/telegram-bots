@@ -266,16 +266,15 @@ public class ManagerBot extends TelegramLongPollingBot {
      * Copies the built uber-jar from the Maven target directory to the deploy location.
      */
     private ShellResult copyJar(AppDefinition app, String buildDir) {
-        // Maven places the uber-jar in target/ of the buildDir
-        // Pattern: *-jar-with-dependencies.jar for assembly builds, or the spring-boot fat jar
-        String findJar = "find " + buildDir + "/target -maxdepth 1 -name '*.jar' "
-                + "! -name '*-sources.jar' ! -name '*-javadoc.jar' "
-                + "| head -n 1";
-        ShellResult found = ShellRunner.run(findJar, null);
+        // Prioritize the uber-jar produced by maven-assembly-plugin
+        String findUber = "find " + buildDir + "/target -maxdepth 1 -name '*-jar-with-dependencies.jar' | head -n 1";
+        ShellResult found = ShellRunner.run(findUber, null);
         if (!found.isSuccess() || found.stdout.isBlank()) {
-            // Fallback: try assembly jar
-            String fallback = "find " + buildDir + "/target -maxdepth 1 -name '*-jar-with-dependencies.jar' | head -n 1";
-            found = ShellRunner.run(fallback, null);
+            // Fallback: any jar except sources/javadoc
+            String findJar = "find " + buildDir + "/target -maxdepth 1 -name '*.jar' "
+                    + "! -name '*-sources.jar' ! -name '*-javadoc.jar' "
+                    + "| head -n 1";
+            found = ShellRunner.run(findJar, null);
         }
         if (found.stdout.isBlank()) {
             return new ShellResult(-1, "", "No jar found in " + buildDir + "/target");
