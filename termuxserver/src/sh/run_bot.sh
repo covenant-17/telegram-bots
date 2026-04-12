@@ -24,6 +24,10 @@ CONVERTER_ERR="$LOG_DIR/converter-bot-error.log"
 YOUTUBE_MP3_DOWNLOADER_JAR="/data/data/com.termux/files/home/termuxserver/src/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar"
 YOUTUBE_MP3_DOWNLOADER_LOG="$LOG_DIR/youtube-mp3-downloader.log"
 YOUTUBE_MP3_DOWNLOADER_ERR="$LOG_DIR/youtube-mp3-downloader-error.log"
+# manager bot
+MANAGER_BOT_JAR="/data/data/com.termux/files/home/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
+MANAGER_BOT_LOG="$LOG_DIR/manager-bot.log"
+MANAGER_BOT_ERR="$LOG_DIR/manager-bot-error.log"
 
 # Starting the bots
 echo "Starting converter-bot..." >> "$CONVERTER_LOG"
@@ -32,6 +36,8 @@ java -jar "$CONVERTER_JAR" >> "$CONVERTER_LOG" 2>> "$CONVERTER_ERR" &
 # java -jar "$FILECONVERTER_JAR" >> "$FILECONVERTER_LOG" 2>> "$FILECONVERTER_ERR" &
 echo "Starting youtube-mp3-downloader..." >> "$YOUTUBE_MP3_DOWNLOADER_LOG"
 java -jar "$YOUTUBE_MP3_DOWNLOADER_JAR" >> "$YOUTUBE_MP3_DOWNLOADER_LOG" 2>> "$YOUTUBE_MP3_DOWNLOADER_ERR" &
+echo "Starting manager-bot..." >> "$MANAGER_BOT_LOG"
+java -jar "$MANAGER_BOT_JAR" >> "$MANAGER_BOT_LOG" 2>> "$MANAGER_BOT_ERR" &
 
 # Wait for all background processes to finish
 exit 0

@@ -9,7 +9,7 @@ mkdir -p "$LOGS_DIR"
 # Add timestamp to log entries
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
-RUNNING_PIDS=$(ps aux | grep -E 'converter-bot|youtube-mp3-downloader' | grep 'java -jar' | grep -v grep | awk '{print $2}')
+RUNNING_PIDS=$(ps aux | grep -E 'converter-bot|youtube-mp3-downloader|manager-bot|trace-keeper' | grep 'java -jar' | grep -v grep | awk '{print $2}')
 for pid in $RUNNING_PIDS; do
     if [ "$pid" != "$$" ]; then
         echo "[$timestamp] Killing process with PID $pid" >> "$KILL_LOG"
