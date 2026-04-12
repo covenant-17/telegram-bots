@@ -1,0 +1,295 @@
+package dev.telegrambots.managerbot;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Manager Bot — controls all other bots running on Termux.
+ *
+ * Commands:
+ *   /status              — show all apps + alive/dead state
+ *   /rebuild <app>       — git pull + mvn package + restart app
+ *   /kill <app>          — kill running process
+ *   /start <app>         — start jar (without rebuild)
+ *   /restart <app>       — kill + start (without rebuild)
+ *   /logs <app> [N]      — last N lines of app log (default 30)
+ *   /help                — list commands
+ */
+public class ManagerBot extends TelegramLongPollingBot {
+
+    private static final Logger logger = LoggerFactory.getLogger(ManagerBot.class);
+    private static final String HOME = "/data/data/com.termux/files/home";
+
+    private final BotConfig config;
+
+    private static String getBotTokenFromConfig() {
+        try {
+            return java.util.ResourceBundle.getBundle("config").getString("bot.token");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load bot token from config", e);
+        }
+    }
+
+    public ManagerBot() {
+        super(getBotTokenFromConfig());
+        this.config = new BotConfig();
+    }
+
+    @Override
+    public String getBotUsername() {
+        return config.botUsername;
+    }
+
+    @Override
+    public void onUpdateReceived(Update update) {
+        if (!update.hasMessage() || !update.getMessage().hasText()) return;
+
+        Message message = update.getMessage();
+        long userId = message.getFrom().getId();
+        long chatId = message.getChatId();
+
+        if (!config.isAllowed(userId)) {
+            send(chatId, "⛔ Access denied.");
+            return;
+        }
+
+        String text = message.getText().trim();
+        String[] parts = text.split("\\s+", 3);
+        String command = parts[0].toLowerCase();
+
+        try {
+            switch (command) {
+                case "/status" -> handleStatus(chatId);
+                case "/rebuild" -> {
+                    if (parts.length < 2) { send(chatId, "Usage: /rebuild <app>"); return; }
+                    handleRebuild(chatId, parts[1].toLowerCase());
+                }
+                case "/kill" -> {
+                    if (parts.length < 2) { send(chatId, "Usage: /kill <app>"); return; }
+                    handleKill(chatId, parts[1].toLowerCase());
+                }
+                case "/start" -> {
+                    if (parts.length < 2) { send(chatId, "Usage: /start <app>"); return; }
+                    handleStart(chatId, parts[1].toLowerCase());
+                }
+                case "/restart" -> {
+                    if (parts.length < 2) { send(chatId, "Usage: /restart <app>"); return; }
+                    handleRestart(chatId, parts[1].toLowerCase());
+                }
+                case "/logs" -> {
+                    if (parts.length < 2) { send(chatId, "Usage: /logs <app> [N]"); return; }
+                    int lines = (parts.length >= 3) ? parseIntSafe(parts[2], 30) : 30;
+                    handleLogs(chatId, parts[1].toLowerCase(), lines);
+                }
+                case "/help" -> handleHelp(chatId);
+                default -> send(chatId, "Unknown command. Use /help.");
+            }
+        } catch (Exception e) {
+            logger.error("Error handling command '{}': {}", command, e.getMessage(), e);
+            send(chatId, "❌ Internal error: " + e.getMessage());
+        }
+    }
+
+    // ─── Handlers ────────────────────────────────────────────────────────────
+
+    private void handleStatus(long chatId) {
+        StringBuilder sb = new StringBuilder("📊 *App Status*\n\n");
+        for (Map.Entry<String, AppDefinition> entry : AppRegistry.all().entrySet()) {
+            AppDefinition app = entry.getValue();
+            List<String> pids = ShellRunner.findPids(app.processPattern);
+            String status = pids.isEmpty() ? "💀 dead" : "✅ alive (pids: " + String.join(", ", pids) + ")";
+            sb.append("• *").append(app.name).append("*: ").append(status).append("\n");
+        }
+        send(chatId, sb.toString().trim());
+    }
+
+    private void handleRebuild(long chatId, String appName) {
+        if (!AppRegistry.exists(appName)) {
+            send(chatId, unknownApp(appName)); return;
+        }
+        AppDefinition app = AppRegistry.get(appName);
+        send(chatId, "🔄 Rebuilding *" + app.name + "*…");
+
+        // 1. git pull
+        send(chatId, "📥 git pull…");
+        ShellResult pull = ShellRunner.run("git pull", app.repoPath);
+        if (!pull.isSuccess()) {
+            send(chatId, "❌ git pull failed:\n```\n" + truncate(pull.combined(), 800) + "\n```");
+            return;
+        }
+        send(chatId, "✅ git pull OK\n" + truncate(pull.stdout, 200));
+
+        // 2. Pre-build step (e.g. shared-config install)
+        if (app.preBuildSubPath != null) {
+            String preBuildDir = app.repoPath + "/" + app.preBuildSubPath;
+            send(chatId, "⚙️ pre-build: mvn install (shared-config)…");
+            ShellResult pre = ShellRunner.run("mvn install -B -DskipTests -q", preBuildDir);
+            if (!pre.isSuccess()) {
+                send(chatId, "❌ Pre-build failed:\n```\n" + truncate(pre.combined(), 800) + "\n```");
+                return;
+            }
+        }
+
+        // 3. Main build
+        String buildDir = app.buildSubPath.isBlank()
+                ? app.repoPath
+                : app.repoPath + "/" + app.buildSubPath;
+        send(chatId, "🔨 mvn package…");
+        ShellResult build = ShellRunner.run("mvn clean package -B -DskipTests -q", buildDir);
+        if (!build.isSuccess()) {
+            send(chatId, "❌ Build failed:\n```\n" + truncate(build.combined(), 1000) + "\n```");
+            return;
+        }
+        send(chatId, "✅ Build OK");
+
+        // 4. Copy jar to deploy location
+        ShellResult copyResult = copyJar(app, buildDir);
+        if (!copyResult.isSuccess()) {
+            send(chatId, "❌ Copy jar failed:\n```\n" + truncate(copyResult.combined(), 800) + "\n```");
+            return;
+        }
+
+        // 5. Restart
+        doRestart(chatId, app);
+    }
+
+    private void handleKill(long chatId, String appName) {
+        if (!AppRegistry.exists(appName)) {
+            send(chatId, unknownApp(appName)); return;
+        }
+        AppDefinition app = AppRegistry.get(appName);
+        int killed = ShellRunner.killByPattern(app.processPattern);
+        if (killed == 0) {
+            send(chatId, "ℹ️ *" + app.name + "* was not running.");
+        } else {
+            send(chatId, "🛑 Killed " + killed + " process(es) for *" + app.name + "*.");
+        }
+    }
+
+    private void handleStart(long chatId, String appName) {
+        if (!AppRegistry.exists(appName)) {
+            send(chatId, unknownApp(appName)); return;
+        }
+        AppDefinition app = AppRegistry.get(appName);
+        doStart(chatId, app);
+    }
+
+    private void handleRestart(long chatId, String appName) {
+        if (!AppRegistry.exists(appName)) {
+            send(chatId, unknownApp(appName)); return;
+        }
+        AppDefinition app = AppRegistry.get(appName);
+        doRestart(chatId, app);
+    }
+
+    private void handleLogs(long chatId, String appName, int lines) {
+        if (!AppRegistry.exists(appName)) {
+            send(chatId, unknownApp(appName)); return;
+        }
+        AppDefinition app = AppRegistry.get(appName);
+        ShellResult out = ShellRunner.tail(app.logPath, lines);
+        ShellResult err = ShellRunner.tail(app.errLogPath, Math.min(lines, 20));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📄 *").append(app.name).append("* — last ").append(lines).append(" lines:\n");
+        sb.append("```\n").append(truncate(out.stdout.isBlank() ? "(empty)" : out.stdout, 2000)).append("\n```");
+        if (!err.stdout.isBlank()) {
+            sb.append("\n⚠️ *stderr* (last 20 lines):\n");
+            sb.append("```\n").append(truncate(err.stdout, 800)).append("\n```");
+        }
+        send(chatId, sb.toString());
+    }
+
+    private void handleHelp(long chatId) {
+        String help = """
+                🤖 *Manager Bot — Commands*
+
+                /status — show all apps (alive/dead)
+                /rebuild <app> — git pull + build + restart
+                /kill <app> — stop running process
+                /start <app> — launch jar (no rebuild)
+                /restart <app> — kill + start (no rebuild)
+                /logs <app> [N] — last N log lines (default 30)
+                /help — this message
+
+                *Apps:* converter\\-bot, youtube\\-mp3\\-downloader, trace\\-keeper, manager\\-bot
+                """;
+        send(chatId, help);
+    }
+
+    // ─── Internal helpers ────────────────────────────────────────────────────
+
+    private void doStart(long chatId, AppDefinition app) {
+        List<String> pids = ShellRunner.findPids(app.processPattern);
+        if (!pids.isEmpty()) {
+            send(chatId, "ℹ️ *" + app.name + "* is already running (pids: " + String.join(", ", pids) + ").");
+            return;
+        }
+        ShellRunner.runDetached("java -jar " + app.jarPath, app.logPath);
+        send(chatId, "🚀 Started *" + app.name + "*.");
+    }
+
+    private void doRestart(long chatId, AppDefinition app) {
+        int killed = ShellRunner.killByPattern(app.processPattern);
+        if (killed > 0) {
+            send(chatId, "🛑 Stopped " + killed + " old process(es).");
+            try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+        }
+        ShellRunner.runDetached("java -jar " + app.jarPath, app.logPath);
+        send(chatId, "🚀 *" + app.name + "* restarted.");
+    }
+
+    /**
+     * Copies the built uber-jar from the Maven target directory to the deploy location.
+     */
+    private ShellResult copyJar(AppDefinition app, String buildDir) {
+        // Maven places the uber-jar in target/ of the buildDir
+        // Pattern: *-jar-with-dependencies.jar for assembly builds, or the spring-boot fat jar
+        String findJar = "find " + buildDir + "/target -maxdepth 1 -name '*.jar' "
+                + "! -name '*-sources.jar' ! -name '*-javadoc.jar' "
+                + "| head -n 1";
+        ShellResult found = ShellRunner.run(findJar, null);
+        if (!found.isSuccess() || found.stdout.isBlank()) {
+            // Fallback: try assembly jar
+            String fallback = "find " + buildDir + "/target -maxdepth 1 -name '*-jar-with-dependencies.jar' | head -n 1";
+            found = ShellRunner.run(fallback, null);
+        }
+        if (found.stdout.isBlank()) {
+            return new ShellResult(-1, "", "No jar found in " + buildDir + "/target");
+        }
+        String sourceJar = found.stdout.trim();
+        return ShellRunner.run("cp \"" + sourceJar + "\" \"" + app.jarPath + "\"", null);
+    }
+
+    private void send(long chatId, String text) {
+        try {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(String.valueOf(chatId));
+            msg.setText(text);
+            msg.setParseMode("Markdown");
+            execute(msg);
+        } catch (Exception e) {
+            logger.error("Failed to send message: {}", e.getMessage());
+        }
+    }
+
+    private String unknownApp(String name) {
+        return "❓ Unknown app: *" + name + "*\nKnown apps: " + String.join(", ", AppRegistry.all().keySet());
+    }
+
+    private String truncate(String s, int maxLen) {
+        if (s == null) return "";
+        return s.length() <= maxLen ? s : s.substring(s.length() - maxLen);
+    }
+
+    private int parseIntSafe(String s, int def) {
+        try { return Integer.parseInt(s); } catch (NumberFormatException e) { return def; }
+    }
+}

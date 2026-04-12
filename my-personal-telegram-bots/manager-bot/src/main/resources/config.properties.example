@@ -1,0 +1,16 @@
+# Manager Bot configuration
+# Copy this file to config.properties and fill in the real values.
+# config.properties is gitignored and must NOT be committed.
+
+# ─── Bot credentials (from @BotFather) ───────────────────────────────────────
+bot.token=YOUR_BOT_TOKEN_HERE
+bot.username=YourManagerBotUsername
+
+# ─── Access control ───────────────────────────────────────────────────────────
+# Comma-separated list of Telegram user IDs that are allowed to use this bot.
+# Get your ID from @userinfobot.
+allowed.user.ids=YOUR_TELEGRAM_USER_ID
+
+# ─── Inherited from BaseBotConfig (optional overrides) ───────────────────────
+max.filesize=52428800
+max.duration=10.0
