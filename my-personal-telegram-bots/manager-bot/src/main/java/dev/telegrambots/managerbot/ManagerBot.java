@@ -155,8 +155,12 @@ public class ManagerBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 5. Restart
-        doRestart(chatId, app);
+        // 5. Restart (self-rebuild: launch new process first, then exit)
+        if (app.name.equals("manager-bot")) {
+            doSelfRestart(chatId, app);
+        } else {
+            doRestart(chatId, app);
+        }
     }
 
     private void handleKill(long chatId, String appName) {
@@ -243,6 +247,19 @@ public class ManagerBot extends TelegramLongPollingBot {
         }
         ShellRunner.runDetached("java -jar " + app.jarPath, app.logPath);
         send(chatId, "🚀 *" + app.name + "* restarted.");
+    }
+
+    /**
+     * Self-rebuild restart: schedules a new process with a short delay, sends a farewell message,
+     * then exits the current JVM — the new process takes over.
+     */
+    private void doSelfRestart(long chatId, AppDefinition app) {
+        // Schedule new instance to start after 3 seconds (enough time to send message)
+        String launchCmd = "sleep 3 && nohup java -jar " + app.jarPath
+                + " >> " + app.logPath + " 2>> " + app.errLogPath + " &";
+        ShellRunner.runDetached("bash -c '" + launchCmd + "'", "/dev/null");
+        send(chatId, "♻️ *manager-bot* rebuilt. Restarting now… I'll be back in a few seconds.");
+        System.exit(0);
     }
 
     /**
