@@ -25,7 +25,8 @@ public class AppRegistry {
                 HOME + "/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar",
                 LOG_BASE + "/converter-bot.log",
                 LOG_BASE + "/converter-bot-error.log",
-                "converter-bot"
+                "converter-bot",
+                "git@github.com:covenant-17/telegram-bots.git"
         ));
 
         APPS.put("youtube-mp3-downloader", new AppDefinition(
@@ -36,7 +37,8 @@ public class AppRegistry {
                 HOME + "/termuxserver/src/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar",
                 LOG_BASE + "/youtube-mp3-downloader.log",
                 LOG_BASE + "/youtube-mp3-downloader-error.log",
-                "youtube-mp3-downloader"
+                "youtube-mp3-downloader",
+                "git@github.com:covenant-17/telegram-bots.git"
         ));
 
         APPS.put("trace-keeper", new AppDefinition(
@@ -47,7 +49,8 @@ public class AppRegistry {
                 HOME + "/termuxserver/src/trace-keeper-1.0.0-SNAPSHOT.jar",
                 LOG_BASE + "/trace-keeper.log",
                 LOG_BASE + "/trace-keeper-error.log",
-                "trace-keeper"
+                "trace-keeper",
+                "git@github.com:covenant-17/trace-keeper.git"
         ));
 
         APPS.put("manager-bot", new AppDefinition(
@@ -58,7 +61,8 @@ public class AppRegistry {
                 HOME + "/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar",
                 LOG_BASE + "/manager-bot.log",
                 LOG_BASE + "/manager-bot-error.log",
-                "manager-bot"
+                "manager-bot",
+                "git@github.com:covenant-17/telegram-bots.git"
         ));
     }
 

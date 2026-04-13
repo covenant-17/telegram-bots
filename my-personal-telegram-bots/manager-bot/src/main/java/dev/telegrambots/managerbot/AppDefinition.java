@@ -27,6 +27,11 @@ public class AppDefinition {
     public final String errLogPath;
     /** String used to identify this app's process in ps output */
     public final String processPattern;
+    /**
+     * Git remote URL for cloning the repo if {@code repoPath} does not exist yet.
+     * Null means cloning is not supported (repo must be present manually).
+     */
+    public final String repoUrl;
 
     public AppDefinition(
             String name,
@@ -36,7 +41,8 @@ public class AppDefinition {
             String jarPath,
             String logPath,
             String errLogPath,
-            String processPattern) {
+            String processPattern,
+            String repoUrl) {
         this.name = name;
         this.repoPath = repoPath;
         this.buildSubPath = buildSubPath;
@@ -45,5 +51,6 @@ public class AppDefinition {
         this.logPath = logPath;
         this.errLogPath = errLogPath;
         this.processPattern = processPattern;
+        this.repoUrl = repoUrl;
     }
 }

@@ -115,4 +115,13 @@ public class ShellRunner {
         }
         return pids.size();
     }
+
+    /**
+     * Kill a process by explicit PID.
+     * Returns true if the kill command was sent successfully.
+     */
+    public static boolean killByPid(String pid) {
+        ShellResult result = run("kill -9 " + pid, null);
+        return result.isSuccess();
+    }
 }

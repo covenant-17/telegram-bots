@@ -44,7 +44,7 @@ public class ManagerBot extends TelegramLongPollingBot {
 
     public void notifyStartup() {
         for (long userId : config.allowedUserIds) {
-            send(userId, "✅ *manager\-bot* is up and running\.");
+            send(userId, "✅ *manager\\-bot* is up and running\\.");
         }
     }
 
@@ -77,8 +77,8 @@ public class ManagerBot extends TelegramLongPollingBot {
                     handleRebuild(chatId, parts[1].toLowerCase());
                 }
                 case "/kill" -> {
-                    if (parts.length < 2) { send(chatId, "Usage: /kill <app>"); return; }
-                    handleKill(chatId, parts[1].toLowerCase());
+                    if (parts.length < 2) { send(chatId, "Usage: /kill <app|PID>"); return; }
+                    handleKill(chatId, parts[1]);
                 }
                 case "/start" -> {
                     if (parts.length < 2) { send(chatId, "Usage: /start <app>"); return; }
@@ -122,14 +122,32 @@ public class ManagerBot extends TelegramLongPollingBot {
         AppDefinition app = AppRegistry.get(appName);
         send(chatId, "🔄 Rebuilding *" + app.name + "*…");
 
-        // 1. git pull
-        send(chatId, "📥 git pull…");
-        ShellResult pull = ShellRunner.run("git pull", app.repoPath);
-        if (!pull.isSuccess()) {
-            send(chatId, "❌ git pull failed:\n```\n" + truncate(pull.combined(), 800) + "\n```");
-            return;
+        // 1. git pull (or clone if repo not present)
+        java.io.File repoDir = new java.io.File(app.repoPath);
+        if (!repoDir.exists()) {
+            if (app.repoUrl == null) {
+                send(chatId, "❌ Repo directory not found: `" + app.repoPath + "`\nNo repoUrl configured — clone manually.");
+                return;
+            }
+            send(chatId, "📥 Repo not found — cloning…");
+            // Clone into parent dir with the last path segment as target
+            String parentPath = repoDir.getParent();
+            String cloneCmd = "mkdir -p \"" + parentPath + "\" && git clone \"" + app.repoUrl + "\" \"" + app.repoPath + "\"";
+            ShellResult clone = ShellRunner.run(cloneCmd, null);
+            if (!clone.isSuccess()) {
+                send(chatId, "❌ git clone failed:\n```\n" + truncate(clone.combined(), 800) + "\n```");
+                return;
+            }
+            send(chatId, "✅ git clone OK");
+        } else {
+            send(chatId, "📥 git pull…");
+            ShellResult pull = ShellRunner.run("git pull", app.repoPath);
+            if (!pull.isSuccess()) {
+                send(chatId, "❌ git pull failed:\n```\n" + truncate(pull.combined(), 800) + "\n```");
+                return;
+            }
+            send(chatId, "✅ git pull OK\n" + truncate(pull.stdout, 200));
         }
-        send(chatId, "✅ git pull OK\n" + truncate(pull.stdout, 200));
 
         // 2. Pre-build step (e.g. shared-config install)
         if (app.preBuildSubPath != null) {
@@ -169,7 +187,17 @@ public class ManagerBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleKill(long chatId, String appName) {
+    private void handleKill(long chatId, String arg) {
+        if (arg.matches("\\d+")) {
+            boolean ok = ShellRunner.killByPid(arg);
+            if (ok) {
+                send(chatId, "🛑 Killed PID " + arg + ".");
+            } else {
+                send(chatId, "❌ Failed to kill PID " + arg + " (no such process?).");
+            }
+            return;
+        }
+        String appName = arg.toLowerCase();
         if (!AppRegistry.exists(appName)) {
             send(chatId, unknownApp(appName)); return;
         }
@@ -222,7 +250,7 @@ public class ManagerBot extends TelegramLongPollingBot {
 
                 /status — show all apps (alive/dead)
                 /rebuild <app> — git pull + build + restart
-                /kill <app> — stop running process
+                /kill <app|PID> — stop running process
                 /start <app> — launch jar (no rebuild)
                 /restart <app> — kill + start (no rebuild)
                 /logs <app> [N] — last N log lines (default 30)
@@ -256,16 +284,17 @@ public class ManagerBot extends TelegramLongPollingBot {
     }
 
     /**
-     * Self-rebuild restart: schedules a new process with a short delay, sends a farewell message,
-     * then exits the current JVM — the new process takes over.
+     * Self-rebuild restart: schedules a new process that first kills this JVM by PID,
+     * then starts the updated jar. More reliable than System.exit(0) since shutdown
+     * hooks from the Telegram library can hang and leave the old process alive.
      */
     private void doSelfRestart(long chatId, AppDefinition app) {
-        // Schedule new instance to start after 3 seconds (enough time to send message)
-        String launchCmd = "sleep 3 && nohup java -jar " + app.jarPath
-                + " >> " + app.logPath + " 2>> " + app.errLogPath + " &";
+        long myPid = ProcessHandle.current().pid();
+        // Kill old JVM by PID, wait a moment, then start new one
+        String launchCmd = "sleep 2 && kill -9 " + myPid + " 2>/dev/null; sleep 1 && nohup java -jar "
+                + app.jarPath + " >> " + app.logPath + " 2>> " + app.errLogPath + " &";
         ShellRunner.runDetached("bash -c '" + launchCmd + "'", "/dev/null");
         send(chatId, "♻️ *manager-bot* rebuilt. Restarting now… I'll be back in a few seconds.");
-        System.exit(0);
     }
 
     /**
