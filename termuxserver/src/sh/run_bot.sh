@@ -12,6 +12,12 @@ trap '. ~/termuxserver/src/sh/kill_bots.sh; exit' INT
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 mkdir -p "$LOG_DIR"
 
+# Load .env for trace-keeper
+ENV_FILE="/data/data/com.termux/files/home/termuxserver/src/.env"
+if [ -f "$ENV_FILE" ]; then
+    set -a; source "$ENV_FILE"; set +a
+fi
+
 # converter bot
 CONVERTER_JAR="/data/data/com.termux/files/home/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
 CONVERTER_LOG="$LOG_DIR/converter-bot.log"
@@ -28,6 +34,11 @@ YOUTUBE_MP3_DOWNLOADER_ERR="$LOG_DIR/youtube-mp3-downloader-error.log"
 MANAGER_BOT_JAR="/data/data/com.termux/files/home/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
 MANAGER_BOT_LOG="$LOG_DIR/manager-bot.log"
 MANAGER_BOT_ERR="$LOG_DIR/manager-bot-error.log"
+# trace-keeper (runs inside proot-distro ubuntu — requires glibc + libssl3)
+TRACE_KEEPER_JAR="/data/data/com.termux/files/home/termuxserver/src/trace-keeper-1.0.0-SNAPSHOT.jar"
+TRACE_KEEPER_LOG="$LOG_DIR/trace-keeper.log"
+TRACE_KEEPER_ERR="$LOG_DIR/trace-keeper-error.log"
+APP_HOME="/data/data/com.termux/files/home"
 
 # Starting the bots
 echo "Starting converter-bot..." >> "$CONVERTER_LOG"
@@ -39,6 +50,16 @@ java -jar "$YOUTUBE_MP3_DOWNLOADER_JAR" >> "$YOUTUBE_MP3_DOWNLOADER_LOG" 2>> "$Y
 WATCHDOG_LOG="$LOG_DIR/watchdog.log"
 echo "Starting manager-bot watchdog..." >> "$WATCHDOG_LOG"
 nohup bash ~/termuxserver/src/sh/watchdog.sh >> "$WATCHDOG_LOG" 2>&1 &
+
+# trace-keeper (via proot-distro ubuntu for glibc/libssl3 support)
+echo "Starting trace-keeper..." >> "$TRACE_KEEPER_LOG"
+nohup proot-distro login ubuntu -- \
+  env TDLIB_API_ID="$TDLIB_API_ID" TDLIB_API_HASH="$TDLIB_API_HASH" \
+  TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN" \
+  TELEGRAM_NOTIFY_CHAT_ID="$TELEGRAM_NOTIFY_CHAT_ID" \
+  TELEGRAM_ADMIN_USER_ID="$TELEGRAM_ADMIN_USER_ID" \
+  java -Dapp.home="$APP_HOME" -jar "$TRACE_KEEPER_JAR" \
+  >> "$TRACE_KEEPER_LOG" 2>> "$TRACE_KEEPER_ERR" &
 
 # Wait for all background processes to finish
 exit 0
