@@ -20,6 +20,7 @@ import java.util.Map;
  *   /start <app>         — start jar (without rebuild)
  *   /restart <app>       — kill + start (without rebuild)
  *   /logs <app> [N]      — last N lines of app log (default 30)
+ *   /apps                — list all apps with ready-to-use commands
  *   /help                — list commands
  */
 public class ManagerBot extends TelegramLongPollingBot {
@@ -93,6 +94,7 @@ public class ManagerBot extends TelegramLongPollingBot {
                     int lines = (parts.length >= 3) ? parseIntSafe(parts[2], 30) : 30;
                     handleLogs(chatId, parts[1].toLowerCase(), lines);
                 }
+                case "/apps" -> handleApps(chatId);
                 case "/help" -> handleHelp(chatId);
                 default -> send(chatId, "Unknown command. Use /help.");
             }
@@ -244,6 +246,21 @@ public class ManagerBot extends TelegramLongPollingBot {
         send(chatId, sb.toString());
     }
 
+    private void handleApps(long chatId) {
+        StringBuilder sb = new StringBuilder("📋 *Apps & Ready Commands*\n");
+        for (Map.Entry<String, AppDefinition> entry : AppRegistry.all().entrySet()) {
+            String name = entry.getValue().name;
+            sb.append("\n┌ *").append(name).append("*\n");
+            sb.append("├ /status\n");
+            sb.append("├ /rebuild ").append(name).append("\n");
+            sb.append("├ /kill ").append(name).append("\n");
+            sb.append("├ /start ").append(name).append("\n");
+            sb.append("├ /restart ").append(name).append("\n");
+            sb.append("└ /logs ").append(name).append("\n");
+        }
+        send(chatId, sb.toString().trim());
+    }
+
     private void handleHelp(long chatId) {
         String help = """
                 🤖 *Manager Bot — Commands*
@@ -254,9 +271,10 @@ public class ManagerBot extends TelegramLongPollingBot {
                 /start <app> — launch jar (no rebuild)
                 /restart <app> — kill + start (no rebuild)
                 /logs <app> [N] — last N log lines (default 30)
+                /apps — list all apps with ready commands
                 /help — this message
 
-                *Apps:* converter\\-bot, youtube\\-mp3\\-downloader, trace\\-keeper, manager\\-bot
+                *Apps:* converter-bot, youtube-mp3-downloader, trace-keeper, manager-bot
                 """;
         send(chatId, help);
     }
