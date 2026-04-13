@@ -153,7 +153,7 @@ public class ManagerBot extends TelegramLongPollingBot {
             send(chatId, "✅ git clone OK");
         } else {
             send(chatId, "📥 git pull…");
-            ShellRunner.run("git checkout -- .", app.repoPath);
+            ShellRunner.run("git reset --hard HEAD", app.repoPath);
             ShellResult pull = ShellRunner.run("git pull", app.repoPath);
             if (!pull.isSuccess()) {
                 send(chatId, "❌ git pull failed:\n```\n" + truncate(pull.combined(), 800) + "\n```");
