@@ -25,6 +25,7 @@ import java.util.Map;
  *   /start <app>         — start jar (without rebuild)
  *   /restart <app>       — kill + start (without rebuild)
  *   /logs <app> [N]      — last N lines of app log (default 1000)
+ *   /clearlogs <app>     — truncate both log files for an app
  *   /apps                — list all apps with ready-to-use commands
  *   /help                — list commands
  */
@@ -98,6 +99,10 @@ public class ManagerBot extends TelegramLongPollingBot {
                     if (parts.length < 2) { send(chatId, "Usage: /logs <app> [N]"); return; }
                     int lines = (parts.length >= 3) ? parseIntSafe(parts[2], 1000) : 1000;
                     handleLogs(chatId, parts[1].toLowerCase(), lines);
+                }
+                case "/clearlogs" -> {
+                    if (parts.length < 2) { send(chatId, "Usage: /clearlogs <app>"); return; }
+                    handleClearLogs(chatId, parts[1].toLowerCase());
                 }
                 case "/apps" -> handleApps(chatId);
                 case "/help" -> handleHelp(chatId);
@@ -254,6 +259,20 @@ public class ManagerBot extends TelegramLongPollingBot {
         sendDocument(chatId, filename, sb.toString(), "📄 " + app.name + " — last " + lines + " lines");
     }
 
+    private void handleClearLogs(long chatId, String appName) {
+        if (!AppRegistry.exists(appName)) {
+            send(chatId, unknownApp(appName)); return;
+        }
+        AppDefinition app = AppRegistry.get(appName);
+        ShellResult r = ShellRunner.run(
+                "truncate -s 0 \"" + app.logPath + "\" && truncate -s 0 \"" + app.errLogPath + "\"", null);
+        if (r.isSuccess()) {
+            send(chatId, "🧹 Logs cleared for *" + app.name + "*.");
+        } else {
+            send(chatId, "❌ Failed to clear logs:\n```\n" + truncate(r.combined(), 400) + "\n```");
+        }
+    }
+
     private void handleApps(long chatId) {
         StringBuilder sb = new StringBuilder("📋 *Apps & Ready Commands*\n");
         for (Map.Entry<String, AppDefinition> entry : AppRegistry.all().entrySet()) {
@@ -265,6 +284,7 @@ public class ManagerBot extends TelegramLongPollingBot {
             sb.append("/start ").append(name).append("\n");
             sb.append("/restart ").append(name).append("\n");
             sb.append("/logs ").append(name).append("\n");
+            sb.append("/clearlogs ").append(name).append("\n");
         }
         send(chatId, sb.toString().trim());
     }
@@ -279,6 +299,7 @@ public class ManagerBot extends TelegramLongPollingBot {
                 /start <app> — launch jar (no rebuild)
                 /restart <app> — kill + start (no rebuild)
                 /logs <app> [N] — last N log lines (default 1000, sent as .md file)
+                /clearlogs <app> — truncate log files for an app
                 /apps — list all apps with ready commands
                 /help — this message
 
