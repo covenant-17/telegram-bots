@@ -239,7 +239,7 @@ public class ManagerBot extends TelegramLongPollingBot {
         }
         AppDefinition app = AppRegistry.get(appName);
         ShellResult out = ShellRunner.tail(app.logPath, lines);
-        ShellResult err = ShellRunner.tail(app.errLogPath, Math.min(lines, 20));
+        ShellResult err = ShellRunner.tail(app.errLogPath, lines);
 
         StringBuilder sb = new StringBuilder();
         sb.append("# ").append(app.name).append(" — last ").append(lines).append(" lines\n\n");
