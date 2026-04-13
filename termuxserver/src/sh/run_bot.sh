@@ -36,8 +36,9 @@ java -jar "$CONVERTER_JAR" >> "$CONVERTER_LOG" 2>> "$CONVERTER_ERR" &
 # java -jar "$FILECONVERTER_JAR" >> "$FILECONVERTER_LOG" 2>> "$FILECONVERTER_ERR" &
 echo "Starting youtube-mp3-downloader..." >> "$YOUTUBE_MP3_DOWNLOADER_LOG"
 java -jar "$YOUTUBE_MP3_DOWNLOADER_JAR" >> "$YOUTUBE_MP3_DOWNLOADER_LOG" 2>> "$YOUTUBE_MP3_DOWNLOADER_ERR" &
-echo "Starting manager-bot..." >> "$MANAGER_BOT_LOG"
-java -jar "$MANAGER_BOT_JAR" >> "$MANAGER_BOT_LOG" 2>> "$MANAGER_BOT_ERR" &
+WATCHDOG_LOG="$LOG_DIR/watchdog.log"
+echo "Starting manager-bot watchdog..." >> "$WATCHDOG_LOG"
+nohup bash ~/termuxserver/src/sh/watchdog.sh >> "$WATCHDOG_LOG" 2>&1 &
 
 # Wait for all background processes to finish
 exit 0
