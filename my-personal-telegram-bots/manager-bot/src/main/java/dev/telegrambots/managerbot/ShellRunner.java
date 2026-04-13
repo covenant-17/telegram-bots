@@ -92,7 +92,7 @@ public class ShellRunner {
      */
     public static List<String> findPids(String pattern) {
         ShellResult result = run(
-                "ps aux | grep '" + pattern + "' | grep 'java -jar' | grep -v grep | awk '{print $2}'",
+                "ps aux | grep '" + pattern + "' | grep 'java' | grep -v grep | awk '{print $2}'",
                 null);
         List<String> pids = new ArrayList<>();
         if (result.isSuccess() && !result.stdout.isBlank()) {
