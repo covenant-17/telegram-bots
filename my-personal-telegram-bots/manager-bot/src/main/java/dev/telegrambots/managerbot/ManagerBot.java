@@ -246,7 +246,7 @@ public class ManagerBot extends TelegramLongPollingBot {
         sb.append("## stdout\n\n");
         sb.append("```\n").append(out.stdout.isBlank() ? "(empty)" : out.stdout).append("\n```\n");
         if (!err.stdout.isBlank()) {
-            sb.append("\n## stderr (last 20 lines)\n\n");
+            sb.append("\n## stderr\n\n");
             sb.append("```\n").append(err.stdout).append("\n```\n");
         }
 
