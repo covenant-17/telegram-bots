@@ -3,9 +3,14 @@ package dev.telegrambots.managerbot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 import java.util.List;
 import java.util.Map;
@@ -19,7 +24,7 @@ import java.util.Map;
  *   /kill <app>          — kill running process
  *   /start <app>         — start jar (without rebuild)
  *   /restart <app>       — kill + start (without rebuild)
- *   /logs <app> [N]      — last N lines of app log (default 30)
+ *   /logs <app> [N]      — last N lines of app log (default 1000)
  *   /apps                — list all apps with ready-to-use commands
  *   /help                — list commands
  */
@@ -45,7 +50,7 @@ public class ManagerBot extends TelegramLongPollingBot {
 
     public void notifyStartup() {
         for (long userId : config.allowedUserIds) {
-            send(userId, "✅ *manager\\-bot* is up and running\\.");
+            send(userId, "✅ manager-bot is up and running.");
         }
     }
 
@@ -91,7 +96,7 @@ public class ManagerBot extends TelegramLongPollingBot {
                 }
                 case "/logs" -> {
                     if (parts.length < 2) { send(chatId, "Usage: /logs <app> [N]"); return; }
-                    int lines = (parts.length >= 3) ? parseIntSafe(parts[2], 30) : 30;
+                    int lines = (parts.length >= 3) ? parseIntSafe(parts[2], 1000) : 1000;
                     handleLogs(chatId, parts[1].toLowerCase(), lines);
                 }
                 case "/apps" -> handleApps(chatId);
@@ -237,26 +242,29 @@ public class ManagerBot extends TelegramLongPollingBot {
         ShellResult err = ShellRunner.tail(app.errLogPath, Math.min(lines, 20));
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📄 *").append(app.name).append("* — last ").append(lines).append(" lines:\n");
-        sb.append("```\n").append(truncate(out.stdout.isBlank() ? "(empty)" : out.stdout, 2000)).append("\n```");
+        sb.append("# ").append(app.name).append(" — last ").append(lines).append(" lines\n\n");
+        sb.append("## stdout\n\n");
+        sb.append("```\n").append(out.stdout.isBlank() ? "(empty)" : out.stdout).append("\n```\n");
         if (!err.stdout.isBlank()) {
-            sb.append("\n⚠️ *stderr* (last 20 lines):\n");
-            sb.append("```\n").append(truncate(err.stdout, 800)).append("\n```");
+            sb.append("\n## stderr (last 20 lines)\n\n");
+            sb.append("```\n").append(err.stdout).append("\n```\n");
         }
-        send(chatId, sb.toString());
+
+        String filename = app.name + "-logs.md";
+        sendDocument(chatId, filename, sb.toString(), "📄 " + app.name + " — last " + lines + " lines");
     }
 
     private void handleApps(long chatId) {
         StringBuilder sb = new StringBuilder("📋 *Apps & Ready Commands*\n");
         for (Map.Entry<String, AppDefinition> entry : AppRegistry.all().entrySet()) {
             String name = entry.getValue().name;
-            sb.append("\n┌ *").append(name).append("*\n");
-            sb.append("├ /status\n");
-            sb.append("├ /rebuild ").append(name).append("\n");
-            sb.append("├ /kill ").append(name).append("\n");
-            sb.append("├ /start ").append(name).append("\n");
-            sb.append("├ /restart ").append(name).append("\n");
-            sb.append("└ /logs ").append(name).append("\n");
+            sb.append("\n*").append(name).append("*\n");
+            sb.append("/status\n");
+            sb.append("/rebuild ").append(name).append("\n");
+            sb.append("/kill ").append(name).append("\n");
+            sb.append("/start ").append(name).append("\n");
+            sb.append("/restart ").append(name).append("\n");
+            sb.append("/logs ").append(name).append("\n");
         }
         send(chatId, sb.toString().trim());
     }
@@ -270,7 +278,7 @@ public class ManagerBot extends TelegramLongPollingBot {
                 /kill <app|PID> — stop running process
                 /start <app> — launch jar (no rebuild)
                 /restart <app> — kill + start (no rebuild)
-                /logs <app> [N] — last N log lines (default 30)
+                /logs <app> [N] — last N log lines (default 1000, sent as .md file)
                 /apps — list all apps with ready commands
                 /help — this message
 
@@ -334,6 +342,20 @@ public class ManagerBot extends TelegramLongPollingBot {
         }
         String sourceJar = found.stdout.trim();
         return ShellRunner.run("cp \"" + sourceJar + "\" \"" + app.jarPath + "\"", null);
+    }
+
+    private void sendDocument(long chatId, String filename, String content, String caption) {
+        try {
+            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+            InputFile inputFile = new InputFile(new ByteArrayInputStream(bytes), filename);
+            SendDocument doc = new SendDocument();
+            doc.setChatId(String.valueOf(chatId));
+            doc.setDocument(inputFile);
+            doc.setCaption(caption);
+            execute(doc);
+        } catch (Exception e) {
+            logger.error("Failed to send document: {}", e.getMessage());
+        }
     }
 
     private void send(long chatId, String text) {
