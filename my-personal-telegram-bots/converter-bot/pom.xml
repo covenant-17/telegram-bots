@@ -116,7 +116,7 @@
                         <configuration>
                             <target>
                                 <copy file="${project.build.directory}/${project.build.finalName}-jar-with-dependencies.jar"
-                                      tofile="C:/!Dev/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"/>
+                                      tofile="C:/!Dev/telegram-bots/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"/>
                             </target>
                         </configuration>
                         <goals>

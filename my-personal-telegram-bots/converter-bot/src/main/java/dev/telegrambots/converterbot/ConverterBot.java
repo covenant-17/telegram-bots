@@ -126,12 +126,16 @@ public class ConverterBot extends TelegramLongPollingBot {
       try {
         System.out.println("[bot] File received: " + fileName);
         
-        // Show typing indicator
-        SendChatAction loader = new SendChatAction();
-        loader.setChatId(message.getChatId().toString());
-        loader.setAction(ActionType.UPLOADDOCUMENT);
-        execute(loader);
-        
+        // Show typing indicator (non-critical, don't abort conversion if it fails)
+        try {
+          SendChatAction loader = new SendChatAction();
+          loader.setChatId(message.getChatId().toString());
+          loader.setAction(ActionType.UPLOADDOCUMENT);
+          execute(loader);
+        } catch (Exception chatActionEx) {
+          logger.warn("Failed to send chat action (non-critical): {}", chatActionEx.getMessage());
+        }
+
         // Download file
         File file = execute(new GetFile(document.getFileId()));
         java.io.File inputFile = downloadFile(file.getFilePath());
@@ -196,20 +200,31 @@ public class ConverterBot extends TelegramLongPollingBot {
       "30",
       mp4Path
     );
-    pb.redirectErrorStream(true);
+    pb.redirectErrorStream(false);
     Process process = pb.start();
+    StringBuilder ffmpegOutput = new StringBuilder();
     try (
-      java.io.BufferedReader reader = new java.io.BufferedReader(
+      java.io.BufferedReader stdout = new java.io.BufferedReader(
         new java.io.InputStreamReader(process.getInputStream())
+      );
+      java.io.BufferedReader stderr = new java.io.BufferedReader(
+        new java.io.InputStreamReader(process.getErrorStream())
       )
     ) {
       String line;
-      while ((line = reader.readLine()) != null) {
+      while ((line = stdout.readLine()) != null) {
         System.out.println("[ffmpeg] " + line);
+      }
+      while ((line = stderr.readLine()) != null) {
+        System.out.println("[ffmpeg] " + line);
+        ffmpegOutput.append(line).append("\n");
       }
     }
     int exitCode = process.waitFor();
-    if (exitCode != 0) throw new IOException("ffmpeg conversion failed");
+    if (exitCode != 0) {
+      logger.error("ffmpeg failed (exit {}). Last output:\n{}", exitCode, ffmpegOutput);
+      throw new IOException("ffmpeg conversion failed (exit code " + exitCode + ")");
+    }
     return new java.io.File(mp4Path);
   }
 
