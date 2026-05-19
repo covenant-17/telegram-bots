@@ -196,8 +196,8 @@ public class ConverterBot extends TelegramLongPollingBot {
       "-y",
       "-i",
       inputFile.getAbsolutePath(),
-      "-r",
-      "30",
+      "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+      "-r", "30",
       mp4Path
     );
     pb.redirectErrorStream(false);
