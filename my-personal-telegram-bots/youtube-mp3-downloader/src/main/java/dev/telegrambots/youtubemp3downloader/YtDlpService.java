@@ -108,38 +108,15 @@ public class YtDlpService {
         boolean audioOk = downloadAudio(url, tempFile.getAbsolutePath());
         if (!audioOk) return false;
 
-        // Download thumbnail to temporary file
+        // Download thumbnail via HTTP (faster than yt-dlp --skip-download)
         String thumbPath = tempFile.getAbsolutePath() + ".jpg";
-        java.util.List<String> thumbCmd = new java.util.ArrayList<>(java.util.Arrays.asList(
-                ytDlpPath,
-                "--skip-download",
-                "--write-thumbnail",
-                "--convert-thumbnails", "jpg",
-                "--output", tempFile.getAbsolutePath().replace(".mp3", "")
-        ));
-        thumbCmd.addAll(cookiesArgs());
-        thumbCmd.add(url);
-        ProcessBuilder pbThumb = new ProcessBuilder(thumbCmd);
-        pbThumb.redirectErrorStream(true);
-        Process thumbProc = pbThumb.start();
-        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(thumbProc.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logger.info("[{}] [yt-dlp-thumb] {}", now(), line);
-            }
+        String videoId = extractVideoId(url);
+        if (videoId != null) {
+            downloadThumbnailHttp(videoId, thumbPath);
         }
-        thumbProc.waitFor();
 
-        // 3. Embed thumbnail into mp3 if downloaded
+        // Embed thumbnail into mp3 if downloaded
         File thumbFile = new File(thumbPath);
-        // If thumbnail not found, look for any jpg with the right prefix in temp_mp3 folder
-        if (!thumbFile.exists()) {
-            File[] jpgs = tempDir.listFiles((d, name) -> name.endsWith(".jpg") && name.startsWith(tempFileName.replace(".mp3", "")));
-            if (jpgs != null && jpgs.length > 0) {
-                thumbFile = jpgs[0];
-                logger.info("[{}] Found alternative thumbnail: {}", now(), thumbFile.getName());
-            }
-        }
         if (thumbFile.exists() && tempFile.exists()) {
             String outWithCover = tempFile.getAbsolutePath().replace(".mp3", "_cover.mp3");
             logger.info("[{}] FFMPEG: tempFile={}, thumbFile={}, outWithCover={}", now(), tempFile.getAbsolutePath(), thumbFile.getAbsolutePath(), outWithCover);
@@ -381,6 +358,43 @@ public class YtDlpService {
 
     public void deleteFileIfExists(File file) {
         Utils.deleteFileIfExists(file);
+    }
+
+    /** Extracts YouTube video ID from various URL formats. */
+    private String extractVideoId(String url) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?:v=|youtu\\.be/|/embed/|/shorts/)([A-Za-z0-9_-]{11})")
+                .matcher(url);
+        return m.find() ? m.group(1) : null;
+    }
+
+    /** Downloads YouTube thumbnail via HTTP. Tries maxresdefault, falls back to hqdefault. */
+    private void downloadThumbnailHttp(String videoId, String destPath) {
+        String[] urls = {
+            "https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg",
+            "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg"
+        };
+        for (String thumbUrl : urls) {
+            try {
+                java.net.URL u = new java.net.URL(thumbUrl);
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) u.openConnection();
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(10000);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                if (conn.getResponseCode() == 200) {
+                    try (java.io.InputStream in = conn.getInputStream();
+                         java.io.FileOutputStream out = new java.io.FileOutputStream(destPath)) {
+                        in.transferTo(out);
+                    }
+                    logger.info("[{}] [thumb-http] Downloaded thumbnail for {}: {}", now(), videoId, thumbUrl);
+                    return;
+                }
+                conn.disconnect();
+            } catch (Exception e) {
+                logger.warn("[{}] [thumb-http] Failed to download {}: {}", now(), thumbUrl, e.getMessage());
+            }
+        }
+        logger.warn("[{}] [thumb-http] Could not download thumbnail for video: {}", now(), videoId);
     }
 }
 
