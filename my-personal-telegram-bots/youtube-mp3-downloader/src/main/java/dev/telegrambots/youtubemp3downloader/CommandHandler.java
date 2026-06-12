@@ -286,6 +286,14 @@ public class CommandHandler {
 
             // 5. Check limits
             telegram.sendChatAction(message.getChatId(), ActionType.TYPING);
+            if (!finalAudioFile.exists() || finalAudioFile.length() == 0) {
+                logger.error("[{}] [FileNotFound] Downloaded file does not exist or is empty: {} | URL: {}", 
+                            now(), finalAudioFile.getAbsolutePath(), url);
+                String errMsg = "[ERROR ☢️☣️] Download failed. The audio file is too large (over " + (config.maxFileSize / 1024 / 1024) + " MB) or the video is unavailable. (" + index + "/" + total + ")\nURL: " + url + " ❓";
+                telegram.sendText(message.getChatId(), errMsg);
+                ytDlpService.deleteFileIfExists(finalAudioFile);
+                return false;
+            }
             double durationAfterDownload = ytDlpService.getAudioDurationSeconds(finalAudioFile.getAbsolutePath());
             if (!ytDlpService.isDurationWithinLimit(durationAfterDownload)) {
                 logger.warn("[{}] [DurationLimit] Video too long: {} seconds | URL: {} | Expected limit: {} seconds", now(), durationAfterDownload, url, 30 * 60);
