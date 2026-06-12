@@ -12,13 +12,27 @@ public class YtDlpService {
     private final String ffprobePath;
     private final long maxFileSize;
     private final double maxDurationMinutes;
+    private final String cookiesPath;
 
     public YtDlpService(String ytDlpPath, String ffmpegPath, String ffprobePath, long maxFileSize, double maxDurationMinutes) {
+        this(ytDlpPath, ffmpegPath, ffprobePath, maxFileSize, maxDurationMinutes, null);
+    }
+
+    public YtDlpService(String ytDlpPath, String ffmpegPath, String ffprobePath, long maxFileSize, double maxDurationMinutes, String cookiesPath) {
         this.ytDlpPath = ytDlpPath;
         this.ffmpegPath = ffmpegPath;
         this.ffprobePath = ffprobePath;
         this.maxFileSize = maxFileSize;
         this.maxDurationMinutes = maxDurationMinutes;
+        this.cookiesPath = cookiesPath;
+    }
+
+    /** Returns --cookies args if a cookies file is configured, otherwise empty list. */
+    private java.util.List<String> cookiesArgs() {
+        if (cookiesPath != null && !cookiesPath.trim().isEmpty()) {
+            return java.util.Arrays.asList("--cookies", cookiesPath);
+        }
+        return java.util.Collections.emptyList();
     }
 
     private static String now() {
@@ -29,39 +43,27 @@ public class YtDlpService {
         }
         
         String ffmpegDir = new File(ffmpegPath).getParent();
-        ProcessBuilder pb;
+        java.util.List<String> cmd = new java.util.ArrayList<>();
+        cmd.add(ytDlpPath);
         if (ffmpegDir != null) {
-            pb = new ProcessBuilder(
-                ytDlpPath,
-                "--ffmpeg-location", ffmpegDir,
-                "--force-overwrites",
-                "-f", "bestaudio[ext=webm]/bestaudio/best",
-                "--extract-audio",
-                "--audio-format", "mp3",
-                "--audio-quality", "320K",
-                "--postprocessor-args", "-b:a 320k",
-                "--max-filesize", maxFileSize + "",
-                "--no-playlist",
-                "--max-downloads", "1",
-                "--output", outputPath,
-                url
-            );
-        } else {
-            pb = new ProcessBuilder(
-                ytDlpPath,
-                "--force-overwrites",
-                "-f", "bestaudio[ext=webm]/bestaudio/best",
-                "--extract-audio",
-                "--audio-format", "mp3",
-                "--audio-quality", "320K",
-                "--postprocessor-args", "-b:a 320k",
-                "--max-filesize", maxFileSize + "",
-                "--no-playlist",
-                "--max-downloads", "1",
-                "--output", outputPath,
-                url
-            );
+            cmd.add("--ffmpeg-location");
+            cmd.add(ffmpegDir);
         }
+        cmd.addAll(java.util.Arrays.asList(
+            "--force-overwrites",
+            "-f", "bestaudio[ext=webm]/bestaudio/best",
+            "--extract-audio",
+            "--audio-format", "mp3",
+            "--audio-quality", "320K",
+            "--postprocessor-args", "-b:a 320k",
+            "--max-filesize", maxFileSize + "",
+            "--no-playlist",
+            "--max-downloads", "1",
+            "--output", outputPath
+        ));
+        cmd.addAll(cookiesArgs());
+        cmd.add(url);
+        ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
         logger.info("[{}] [yt-dlp] Command: {}", now(), String.join(" ", pb.command()));
         Process process = pb.start();
@@ -108,14 +110,16 @@ public class YtDlpService {
 
         // Download thumbnail to temporary file
         String thumbPath = tempFile.getAbsolutePath() + ".jpg";
-        ProcessBuilder pbThumb = new ProcessBuilder(
+        java.util.List<String> thumbCmd = new java.util.ArrayList<>(java.util.Arrays.asList(
                 ytDlpPath,
                 "--skip-download",
                 "--write-thumbnail",
                 "--convert-thumbnails", "jpg",
-                "--output", tempFile.getAbsolutePath().replace(".mp3", ""),
-                url
-        );
+                "--output", tempFile.getAbsolutePath().replace(".mp3", "")
+        ));
+        thumbCmd.addAll(cookiesArgs());
+        thumbCmd.add(url);
+        ProcessBuilder pbThumb = new ProcessBuilder(thumbCmd);
         pbThumb.redirectErrorStream(true);
         Process thumbProc = pbThumb.start();
         try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(thumbProc.getInputStream()))) {
@@ -230,10 +234,13 @@ public class YtDlpService {
             return new String[]{"channel", "video"};
         }
         
-        ProcessBuilder pb = new ProcessBuilder(
+        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
                 ytDlpPath,
-                "--print", "uploader", "--print", "title", url
-        );
+                "--print", "uploader", "--print", "title"
+        ));
+        cmd.addAll(cookiesArgs());
+        cmd.add(url);
+        ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
         Process process = pb.start();
         java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
@@ -268,12 +275,14 @@ public class YtDlpService {
         }
         
         // Fallback to regular video size if audio size is not available
-        ProcessBuilder pb = new ProcessBuilder(
+        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
                 ytDlpPath,
                 "--dump-json",
-                "--no-download",
-                url
-        );
+                "--no-download"
+        ));
+        cmd.addAll(cookiesArgs());
+        cmd.add(url);
+        ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
         Process process = pb.start();
         
@@ -318,15 +327,17 @@ public class YtDlpService {
      * @return array: [audio filesize in bytes (-1 if unknown), duration in seconds (-1 if unknown)]
      */
     private long[] getAudioOnlySize(String url) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
+        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
                 ytDlpPath,
                 "--dump-json",
                 "--no-download",
                 "--format", "bestaudio[ext=webm]/bestaudio/best",
                 "--extract-audio",
-                "--audio-format", "mp3",
-                url
-        );
+                "--audio-format", "mp3"
+        ));
+        cmd.addAll(cookiesArgs());
+        cmd.add(url);
+        ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
         Process process = pb.start();
         

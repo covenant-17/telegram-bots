@@ -31,6 +31,13 @@ max.duration=10.0
 # Parallel downloads limit (default: 3, reduced for stability)
 max.parallel.downloads=1
 
+# YouTube Cookies (optional, for bypassing bot-detection)
+# Export cookies from your browser using a browser extension (e.g. "Get cookies.txt LOCALLY")
+# and place the file on the server. Set the path here.
+# Example: yt-dlp.cookies.path=/data/data/com.termux/files/home/cookies.txt
+# Leave empty to disable (default)
+yt-dlp.cookies.path=
+
 # Configuration Instructions:
 # 1. Copy this file to config.properties
 # 2. Replace YOUR_BOT_TOKEN_HERE with your actual bot token from @BotFather

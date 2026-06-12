@@ -13,6 +13,7 @@ public class BotConfig extends BaseBotConfig {
     public final String ffmpegPath;
     public final String ffprobePath;
     public final int maxParallelDownloads;
+    public final String cookiesFilePath;
 
     /**
      * Constructor that loads configuration from config.properties.
@@ -41,6 +42,9 @@ public class BotConfig extends BaseBotConfig {
 
         // Maximum parallel downloads (default: 3)
         this.maxParallelDownloads = getIntProperty("max.parallel.downloads", 3);
+        
+        // Optional: path to YouTube cookies file for bot-detection bypass
+        this.cookiesFilePath = getStringProperty("yt-dlp.cookies.path", "");
         
         // Validate configuration after all fields are initialized
         validateConfiguration();
