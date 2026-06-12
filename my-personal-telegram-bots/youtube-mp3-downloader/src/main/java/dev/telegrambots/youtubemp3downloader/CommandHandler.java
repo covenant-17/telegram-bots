@@ -178,29 +178,6 @@ public class CommandHandler {
         logger.debug("[{}] Starting progress thread for chatId: {}", now(), chatId);
         progressThread.start();
         try {
-            // Pre-check video size and duration to avoid wasting time on large videos
-            logger.info("[{}] Pre-checking video size and duration for URL: {}", now(), url);
-            long[] sizeAndDuration = ytDlpService.getVideoSizeAndDuration(url);
-            long filesize = sizeAndDuration[0];
-            long duration = sizeAndDuration[1];
-            
-            // Check duration limit
-            if (duration > 0 && duration > config.maxDurationMinutes * 60) {
-                logger.warn("[{}] Audio duration exceeds limit: {} seconds for URL: {} | Expected limit: {} seconds", now(), duration, url, config.maxDurationMinutes * 60);
-                String errMsg = "[ERROR ☢️☣️] Audio is too long (over " + config.maxDurationMinutes + " minutes). Try another video. (" + index + "/" + total + ")\nURL: " + url + " ⏳";
-                telegram.sendText(Long.valueOf(chatId), errMsg);
-                return false;
-            }
-            
-            // Check file size limit
-            if (filesize > 0 && filesize > config.maxFileSize) {
-                logger.warn("[{}] Audio file size exceeds limit: {} bytes for URL: {} | Expected limit: {} bytes", now(), filesize, url, config.maxFileSize);
-                String errMsg = "[ERROR ☢️☣️] Audio file is too large (over " + (config.maxFileSize / 1024 / 1024) + " MB). Try another video. (" + index + "/" + total + ")\nURL: " + url + " 💾";
-                telegram.sendText(Long.valueOf(chatId), errMsg);
-                return false;
-            }
-            
-            logger.info("[{}] Pre-check passed for URL: {} | Size: {} bytes | Duration: {} seconds", now(), url, filesize, duration);
             
             // Update yt-dlp parameters to extract audio only (for getting metadata)
             ProcessBuilder pb = new ProcessBuilder(
