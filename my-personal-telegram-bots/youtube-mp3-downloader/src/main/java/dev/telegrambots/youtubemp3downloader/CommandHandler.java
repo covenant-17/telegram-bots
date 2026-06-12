@@ -16,7 +16,8 @@ public class CommandHandler {
     private static final ExecutorService executor = Executors.newFixedThreadPool(4);
     private static final BotConfig config = new BotConfig();
     private static final YtDlpService ytDlpService = new YtDlpService(
-            config.ytDlpPath, config.ffmpegPath, config.ffprobePath, config.maxFileSize, config.maxDurationMinutes);
+            config.ytDlpPath, config.ffmpegPath, config.ffprobePath, config.maxFileSize, config.maxDurationMinutes,
+            config.cookiesFilePath);
 
     /**
      * Returns the current date and time as a formatted string (yyyy-MM-dd HH:mm:ss).
