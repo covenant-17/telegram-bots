@@ -46,11 +46,14 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("dark techno ebm industrial type", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("topic", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("2025", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("2026", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("премьера", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("песни", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\(", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile(","), "");
+        rules.put(Pattern.compile("\\s*//.*"), ""); // Remove genre tags like "// Darkwave, Coldwave"
+        rules.put(Pattern.compile("\\s+/\\s+[^/]*/.*"), ""); // Remove multi-slash genre tags like "/ Post-Punk Phonk / Phonk-Wave"
         rules.put(Pattern.compile("/"), " ");
         // URL-encoded characters - decode main ones
         rules.put(Pattern.compile("%20"), " "); // Decode space
