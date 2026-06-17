@@ -33,7 +33,7 @@ public class AppRegistry {
                 "youtube-mp3-downloader",
                 HOME + "/repos/telegram-bots",
                 "my-personal-telegram-bots/youtube-mp3-downloader",
-                null,
+                "my-personal-telegram-bots/shared-config",
                 HOME + "/termuxserver/src/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar",
                 LOG_BASE + "/youtube-mp3-downloader.log",
                 LOG_BASE + "/youtube-mp3-downloader-error.log",

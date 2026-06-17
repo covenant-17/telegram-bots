@@ -44,23 +44,41 @@ public abstract class BaseBotConfig {
     }
 
     public static ResourceBundle loadConfig() {
-        for (Path externalConfig : configCandidates()) {
+        for (Path externalConfig : explicitConfigCandidates()) {
             if (Files.isRegularFile(externalConfig)) {
-                try (FileInputStream input = new FileInputStream(externalConfig.toFile())) {
-                    return new PropertyResourceBundle(input);
-                } catch (IOException e) {
-                    throw new UncheckedIOException("Failed to load " + externalConfig, e);
-                }
+                return loadExternalConfig(externalConfig);
             }
         }
 
-        return ResourceBundle.getBundle("config");
+        try {
+            return ResourceBundle.getBundle("config");
+        } catch (java.util.MissingResourceException e) {
+            for (Path externalConfig : fallbackConfigCandidates()) {
+                if (Files.isRegularFile(externalConfig)) {
+                    return loadExternalConfig(externalConfig);
+                }
+            }
+            throw e;
+        }
     }
 
-    private static java.util.List<Path> configCandidates() {
+    private static ResourceBundle loadExternalConfig(Path externalConfig) {
+        try (FileInputStream input = new FileInputStream(externalConfig.toFile())) {
+            return new PropertyResourceBundle(input);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to load " + externalConfig, e);
+        }
+    }
+
+    private static java.util.List<Path> explicitConfigCandidates() {
         java.util.List<Path> candidates = new java.util.ArrayList<>();
         addIfPresent(candidates, System.getProperty("bot.config.path"));
         addIfPresent(candidates, System.getenv("BOT_CONFIG_PATH"));
+        return candidates;
+    }
+
+    private static java.util.List<Path> fallbackConfigCandidates() {
+        java.util.List<Path> candidates = new java.util.ArrayList<>();
         candidates.add(Path.of("config.properties"));
 
         String classPath = System.getProperty("java.class.path", "");
