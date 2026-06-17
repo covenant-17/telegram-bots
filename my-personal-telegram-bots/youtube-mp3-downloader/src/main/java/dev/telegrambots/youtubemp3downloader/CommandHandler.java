@@ -26,6 +26,13 @@ public class CommandHandler {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
+    private static java.util.List<String> cookiesArgs() {
+        if (config.cookiesFilePath != null && !config.cookiesFilePath.trim().isEmpty()) {
+            return java.util.Arrays.asList("--cookies", config.cookiesFilePath);
+        }
+        return java.util.Collections.emptyList();
+    }
+
     /**
      * Handles incoming Telegram updates. Detects YouTube links in the message, processes single or multiple links,
      * sends progress updates, and triggers audio download and conversion.
@@ -180,14 +187,16 @@ public class CommandHandler {
         try {
             
             // Update yt-dlp parameters to extract audio only (for getting metadata)
-            ProcessBuilder pb = new ProcessBuilder(
+            java.util.List<String> metadataCommand = new java.util.ArrayList<>(java.util.Arrays.asList(
                 config.ytDlpPath,
                 "--extract-audio",
                 "--audio-format", "mp3",
                 "--audio-quality", "320k",
-                "--dump-json",
-                url
-            );
+                "--dump-json"
+            ));
+            metadataCommand.addAll(cookiesArgs());
+            metadataCommand.add(url);
+            ProcessBuilder pb = new ProcessBuilder(metadataCommand);
             pb.redirectErrorStream(true);
             logger.debug("[{}] yt-dlp command: {}", now(), String.join(" ", pb.command()));
             Process proc = pb.start();
@@ -370,6 +379,4 @@ public class CommandHandler {
         }
         return false;
     }
-
-    // Note: Bot authorization on YouTube is not possible using standard yt-dlp/ffmpeg methods. yt-dlp supports cookies (--cookies), but for a Telegram bot, this is highly inconvenient and not recommended. YouTube actively fights automation and authorization through third-party services.
 }

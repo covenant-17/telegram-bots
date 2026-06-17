@@ -1,5 +1,12 @@
 package dev.telegrambots.shared;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 
 /**
@@ -26,7 +33,7 @@ public abstract class BaseBotConfig {
      * Subclasses should call super() and then load their specific properties.
      */
     protected BaseBotConfig() {
-        this.config = ResourceBundle.getBundle("config");
+        this.config = loadConfig();
         
         // Common file limits
         this.maxFileSize = getLongProperty("max.filesize", 50 * 1024 * 1024L);
@@ -34,6 +41,46 @@ public abstract class BaseBotConfig {
         
         // NOTE: Validation is NOT called here - subclasses should call validateConfiguration()
         // after initializing their fields
+    }
+
+    public static ResourceBundle loadConfig() {
+        for (Path externalConfig : configCandidates()) {
+            if (Files.isRegularFile(externalConfig)) {
+                try (FileInputStream input = new FileInputStream(externalConfig.toFile())) {
+                    return new PropertyResourceBundle(input);
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Failed to load " + externalConfig, e);
+                }
+            }
+        }
+
+        return ResourceBundle.getBundle("config");
+    }
+
+    private static java.util.List<Path> configCandidates() {
+        java.util.List<Path> candidates = new java.util.ArrayList<>();
+        addIfPresent(candidates, System.getProperty("bot.config.path"));
+        addIfPresent(candidates, System.getenv("BOT_CONFIG_PATH"));
+        candidates.add(Path.of("config.properties"));
+
+        String classPath = System.getProperty("java.class.path", "");
+        for (String entry : classPath.split(java.util.regex.Pattern.quote(File.pathSeparator))) {
+            if (!entry.isBlank()) {
+                Path classPathEntry = Path.of(entry);
+                Path parent = Files.isDirectory(classPathEntry) ? classPathEntry : classPathEntry.getParent();
+                if (parent != null) {
+                    candidates.add(parent.resolve("config.properties"));
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    private static void addIfPresent(java.util.List<Path> candidates, String path) {
+        if (path != null && !path.isBlank()) {
+            candidates.add(Path.of(path));
+        }
     }
 
     /**

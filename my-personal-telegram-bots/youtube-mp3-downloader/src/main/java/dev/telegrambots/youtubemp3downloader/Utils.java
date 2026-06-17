@@ -1,12 +1,13 @@
 package dev.telegrambots.youtubemp3downloader;
 
+import dev.telegrambots.shared.BaseBotConfig;
 import java.io.File;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Utils {
-    private static final java.util.ResourceBundle config = java.util.ResourceBundle.getBundle("config");
+    private static final java.util.ResourceBundle config = BaseBotConfig.loadConfig();
     private static final String YT_DLP_PATH = config.containsKey("yt-dlp.path") ? config.getString("yt-dlp.path") : "yt-dlp";
     private static final String FFMPEG_PATH = config.containsKey("ffmpeg.path") ? config.getString("ffmpeg.path") : "ffmpeg";
     private static final String FFPROBE_PATH = config.containsKey("ffprobe.path") ? config.getString("ffprobe.path") : "ffprobe";
