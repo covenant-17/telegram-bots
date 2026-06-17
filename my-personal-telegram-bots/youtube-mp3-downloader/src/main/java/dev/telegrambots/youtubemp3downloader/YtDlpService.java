@@ -27,12 +27,15 @@ public class YtDlpService {
         this.cookiesPath = cookiesPath;
     }
 
-    /** Returns --cookies args if a cookies file is configured, otherwise empty list. */
-    private java.util.List<String> cookiesArgs() {
+    private java.util.List<String> commonYtDlpArgs() {
+        java.util.List<String> args = new java.util.ArrayList<>();
+        args.add("--remote-components");
+        args.add("ejs:github");
         if (cookiesPath != null && !cookiesPath.trim().isEmpty()) {
-            return java.util.Arrays.asList("--cookies", cookiesPath);
+            args.add("--cookies");
+            args.add(cookiesPath);
         }
-        return java.util.Collections.emptyList();
+        return args;
     }
 
     private static String now() {
@@ -61,7 +64,7 @@ public class YtDlpService {
             "--max-downloads", "1",
             "--output", outputPath
         ));
-        cmd.addAll(cookiesArgs());
+        cmd.addAll(commonYtDlpArgs());
         cmd.add(url);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
@@ -215,7 +218,7 @@ public class YtDlpService {
                 ytDlpPath,
                 "--print", "uploader", "--print", "title"
         ));
-        cmd.addAll(cookiesArgs());
+        cmd.addAll(commonYtDlpArgs());
         cmd.add(url);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
@@ -257,7 +260,7 @@ public class YtDlpService {
                 "--dump-json",
                 "--no-download"
         ));
-        cmd.addAll(cookiesArgs());
+        cmd.addAll(commonYtDlpArgs());
         cmd.add(url);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
@@ -312,7 +315,7 @@ public class YtDlpService {
                 "--extract-audio",
                 "--audio-format", "mp3"
         ));
-        cmd.addAll(cookiesArgs());
+        cmd.addAll(commonYtDlpArgs());
         cmd.add(url);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);

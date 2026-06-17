@@ -26,11 +26,15 @@ public class CommandHandler {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
-    private static java.util.List<String> cookiesArgs() {
+    private static java.util.List<String> commonYtDlpArgs() {
+        java.util.List<String> args = new java.util.ArrayList<>();
+        args.add("--remote-components");
+        args.add("ejs:github");
         if (config.cookiesFilePath != null && !config.cookiesFilePath.trim().isEmpty()) {
-            return java.util.Arrays.asList("--cookies", config.cookiesFilePath);
+            args.add("--cookies");
+            args.add(config.cookiesFilePath);
         }
-        return java.util.Collections.emptyList();
+        return args;
     }
 
     /**
@@ -194,7 +198,7 @@ public class CommandHandler {
                 "--audio-quality", "320k",
                 "--dump-json"
             ));
-            metadataCommand.addAll(cookiesArgs());
+            metadataCommand.addAll(commonYtDlpArgs());
             metadataCommand.add(url);
             ProcessBuilder pb = new ProcessBuilder(metadataCommand);
             pb.redirectErrorStream(true);
