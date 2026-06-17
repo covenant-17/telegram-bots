@@ -11,6 +11,8 @@ trap '. ~/termuxserver/src/sh/kill_bots.sh; exit' INT
 # Log directory
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 mkdir -p "$LOG_DIR"
+APP_DIR="/data/data/com.termux/files/home/termuxserver/src"
+cd "$APP_DIR" || exit 1
 
 # Load .env for trace-keeper
 ENV_FILE="/data/data/com.termux/files/home/termuxserver/src/.env"

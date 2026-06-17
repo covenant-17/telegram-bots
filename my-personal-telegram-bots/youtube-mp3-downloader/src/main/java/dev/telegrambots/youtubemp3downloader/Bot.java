@@ -1,5 +1,6 @@
 package dev.telegrambots.youtubemp3downloader;
 
+import dev.telegrambots.shared.BaseBotConfig;
 // Telegram Bots API - Core bot functionality
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -39,7 +40,7 @@ public class Bot extends TelegramLongPollingBot {
 
     private static String getBotTokenFromConfig() {
         try {
-            return java.util.ResourceBundle.getBundle("config").getString("bot.token");
+            return BaseBotConfig.loadConfig().getString("bot.token");
         } catch (Exception e) {
             throw new RuntimeException("Failed to load bot token from config", e);
         }
