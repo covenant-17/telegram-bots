@@ -118,6 +118,9 @@ public class YtDlpService {
             downloadThumbnailHttp(videoId, thumbPath);
         }
 
+        File sourceMp3 = tempFile;
+        File outWithCoverFile = new File(tempDir, tempFileName.replace(".mp3", "_cover.mp3"));
+
         // Embed thumbnail into mp3 if downloaded
         File thumbFile = new File(thumbPath);
         if (thumbFile.exists() && tempFile.exists()) {
@@ -155,21 +158,24 @@ public class YtDlpService {
             }
 
             if (ffmpegExit == 0) {
-                File saveDir = Utils.getYoutubeMp3WorkzoneDir();
-                if (!saveDir.exists()) saveDir.mkdirs();
-                File finalFile = new File(saveDir, baseName + ".mp3");
-                File outWithCoverFile = new File(tempDir, tempFileName.replace(".mp3", "_cover.mp3"));
-                File sourceMp3 = outWithCoverFile.exists() ? outWithCoverFile : tempFile;
-                java.nio.file.Files.copy(sourceMp3.toPath(), finalFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                logger.info("[{}] File saved to: {}", now(), finalFile.getAbsolutePath());
+                sourceMp3 = outWithCoverFile.exists() ? outWithCoverFile : tempFile;
             }
             // Delete thumbnail
             thumbFile.delete();
-            new File(outWithCover).delete(); // if rename failed
         }
+
+        if (!sourceMp3.exists() || sourceMp3.length() == 0) {
+            logger.error("[{}] Downloaded temp audio file not found or empty: {}", now(), sourceMp3.getAbsolutePath());
+            return false;
+        }
+
+        File finalFile = new File(audioFile.getParentFile(), baseName + ".mp3");
+        java.nio.file.Files.copy(sourceMp3.toPath(), finalFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        logger.info("[{}] File saved to: {}", now(), finalFile.getAbsolutePath());
 
         // Delete tempFile and all temp jpg after completion
         tempFile.delete();
+        outWithCoverFile.delete();
         File[] tempJpgs = tempDir.listFiles((d, name) -> name.startsWith(baseName) && name.endsWith(".jpg"));
         if (tempJpgs != null) {
             for (File jpg : tempJpgs) jpg.delete();
