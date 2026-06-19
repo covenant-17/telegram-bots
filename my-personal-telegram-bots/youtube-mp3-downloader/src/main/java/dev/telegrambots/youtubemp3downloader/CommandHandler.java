@@ -284,7 +284,7 @@ public class CommandHandler {
                 ? FileNameSanitizer.composeFileName(sanitizedChannel, sanitizedTitle)
                 : sanitizedTitle;
             if (baseFileName == null || baseFileName.isBlank()) baseFileName = "audio";
-            java.io.File saveDir = new java.io.File("termuxserver/youtube_mp3_downloader_workzone");
+            java.io.File saveDir = Utils.getYoutubeMp3WorkzoneDir();
             if (!saveDir.exists()) saveDir.mkdirs();
             String finalFile = baseFileName + ".mp3";
             java.io.File finalAudioFile = new java.io.File(saveDir, finalFile);

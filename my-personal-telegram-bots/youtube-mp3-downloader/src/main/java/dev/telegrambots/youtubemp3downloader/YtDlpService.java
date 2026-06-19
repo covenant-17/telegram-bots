@@ -155,8 +155,7 @@ public class YtDlpService {
             }
 
             if (ffmpegExit == 0) {
-                // After successful embedding/rename, copy tempFile (or outWithCover) to termuxserver/youtube_mp3_downloader_workzone with final name
-                File saveDir = new File("termuxserver/youtube_mp3_downloader_workzone");
+                File saveDir = Utils.getYoutubeMp3WorkzoneDir();
                 if (!saveDir.exists()) saveDir.mkdirs();
                 File finalFile = new File(saveDir, baseName + ".mp3");
                 File outWithCoverFile = new File(tempDir, tempFileName.replace(".mp3", "_cover.mp3"));

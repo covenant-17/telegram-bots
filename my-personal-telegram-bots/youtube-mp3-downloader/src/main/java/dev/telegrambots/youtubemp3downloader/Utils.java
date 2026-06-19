@@ -45,7 +45,19 @@ public class Utils {
     
     public static String getFfprobePath() {
         return FFPROBE_PATH;
-    }    
+    }
+
+    public static File getYoutubeMp3WorkzoneDir() {
+        String home = System.getProperty("user.home");
+        if (home == null || home.isBlank()) {
+            home = System.getenv("HOME");
+        }
+        if (home == null || home.isBlank()) {
+            return new File("termuxserver/youtube_mp3_downloader_workzone");
+        }
+        return new File(new File(home, "termuxserver"), "youtube_mp3_downloader_workzone");
+    }
+
     public static boolean isFileSizeWithinLimit(File file, long maxBytes) {
         if (file == null || !file.exists()) {
             return false;
