@@ -53,4 +53,18 @@ class FileNameSanitizerTest {
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test___Name"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test_Name"));
     }
+
+    @Test
+    void testSanitizeRemovesKnownChannelAndGenreNoise() {
+        assertEquals("♾ A Flock Of Seagulls — I Ran Δllicθrn Remix",
+                FileNameSanitizer.sanitize("Untitled Burial - ♾ A Flock Of Seagulls — I Ran Δllicθrn Remix.mp3"));
+        assertEquals("Voco Void",
+                FileNameSanitizer.sanitize("Voco Void Darkwave Post Punk.mp3"));
+        assertEquals("System Of A Down Spiders Lara Newman Tuesday",
+                FileNameSanitizer.sanitize("System Of A Down Spiders Lara Newman Tuesday Cover Darkwave Post Punk.mp3"));
+        assertEquals("She Is A Purple Storm Alexandra Skye",
+                FileNameSanitizer.sanitize("She Is A Purple Storm Darkwave Postpunk Indie Pop Alexandra Skye.mp3"));
+        assertEquals("Nina Gallow Rosarote Brille",
+                FileNameSanitizer.sanitize("Nina Gallow Rosarote Brille Minimal Synth Darkwave.mp3"));
+    }
 }
