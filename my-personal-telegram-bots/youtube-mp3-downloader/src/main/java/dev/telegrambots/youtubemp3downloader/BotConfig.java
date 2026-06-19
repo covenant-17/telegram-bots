@@ -7,6 +7,9 @@ import dev.telegrambots.shared.BaseBotConfig;
  * Handles tool paths, file limits, and parallel download settings.
  */
 public class BotConfig extends BaseBotConfig {
+    public static final String MAX_PARALLEL_DOWNLOADS_PROPERTY = "max.parallel.downloads";
+    public static final int DEFAULT_MAX_PARALLEL_DOWNLOADS = 3;
+
     public final String botToken;
     public final String botUsername;
     public final String ytDlpPath;
@@ -40,8 +43,7 @@ public class BotConfig extends BaseBotConfig {
             this.ffprobePath = resolvePath("ffprobe.path.unix", "FFPROBE_PATH", "ffprobe");
         }
 
-        // Maximum parallel downloads (default: 3)
-        this.maxParallelDownloads = getIntProperty("max.parallel.downloads", 3);
+        this.maxParallelDownloads = getIntProperty(MAX_PARALLEL_DOWNLOADS_PROPERTY, DEFAULT_MAX_PARALLEL_DOWNLOADS);
         
         // Optional: path to YouTube cookies file for bot-detection bypass
         this.cookiesFilePath = getStringProperty("yt-dlp.cookies.path", "");
