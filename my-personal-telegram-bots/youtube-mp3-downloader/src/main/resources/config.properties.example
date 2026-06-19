@@ -28,8 +28,8 @@ max.filesize=52428800
 # Maximum video duration in minutes (default: 10 minutes)
 max.duration=10.0
 
-# Parallel downloads limit (default: 3, reduced for stability)
-max.parallel.downloads=1
+# Parallel downloads limit
+max.parallel.downloads=3
 
 # YouTube Cookies (optional, for bypassing bot-detection)
 # Export cookies from your browser using a browser extension (e.g. "Get cookies.txt LOCALLY")
