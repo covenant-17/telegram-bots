@@ -56,7 +56,7 @@ class FileNameSanitizerTest {
 
     @Test
     void testSanitizeRemovesKnownChannelAndGenreNoise() {
-        assertEquals("♾ A Flock Of Seagulls — I Ran Δllicθrn Remix",
+        assertEquals("♾ A Flock Of Seagulls I Ran Δllicθrn Remix",
                 FileNameSanitizer.sanitize("Untitled Burial - ♾ A Flock Of Seagulls — I Ran Δllicθrn Remix.mp3"));
         assertEquals("Voco Void",
                 FileNameSanitizer.sanitize("Voco Void Darkwave Post Punk.mp3"));
@@ -66,5 +66,15 @@ class FileNameSanitizerTest {
                 FileNameSanitizer.sanitize("She Is A Purple Storm Darkwave Postpunk Indie Pop Alexandra Skye.mp3"));
         assertEquals("Nina Gallow Rosarote Brille",
                 FileNameSanitizer.sanitize("Nina Gallow Rosarote Brille Minimal Synth Darkwave.mp3"));
+        assertEquals("Alex Droidglow When The Sky Falls",
+                FileNameSanitizer.sanitize("Aim To Head Release Alex Droidglow When The Sky Falls Original Mix.mp3"));
+        assertEquals("Amanda Byron Absolute",
+                FileNameSanitizer.sanitize("Amor Fati Amanda Byron Absolute.mp3"));
+        assertEquals("Maya Silver Nocturnal Animals",
+                FileNameSanitizer.sanitize("Maya Silver Nocturnal Animals Cinematic Darkwave Noir Post Punk.mp3"));
+        assertEquals("Maya Silver Nocturnal Animals",
+                FileNameSanitizer.sanitize("Maya Silver Nocturnal Animals Сinematic Darkwave Noir Post Punk.mp3"));
+        assertEquals("Maya Silver Heaven Or Hell",
+                FileNameSanitizer.sanitize("Maya Silver Heaven Or Hell 𝗢𝗕𝗦𝗖𝗨𝗥𝗘 𝗩𝗘𝗥𝗦𝗜𝗢𝗡.mp3"));
     }
 }

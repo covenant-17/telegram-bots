@@ -4,6 +4,7 @@ import java.util.regex.Pattern;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.File;
+import java.text.Normalizer;
 
 public class FileNameSanitizer {
     /**
@@ -29,7 +30,10 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("#"), "");
         rules.put(Pattern.compile("\""), "");
         rules.put(Pattern.compile("_+"), " ");
+        rules.put(Pattern.compile("[\\u2013\\u2014]"), " ");
         rules.put(Pattern.compile("^\\s*untitled\\s+burial\\s*-\\s*", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*aim\\s+to\\s+head\\s+release\\s+", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*amor\\s+fati\\s+", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("-{2,}"), " ");
         rules.put(Pattern.compile("-"), " ");
         rules.put(Pattern.compile("([\\[].+[\\]])"), "");
@@ -54,6 +58,9 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("\\bdarkwave\\s+post\\s+punk\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\bdarkwave\\s+postpunk\\s+indie\\s+pop\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\bminimal\\s+synth\\s+darkwave\\b", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("(^|\\s)[Cc\\u0421\\u0441]inematic\\s+darkwave\\s+noir\\s+post\\s+punk(?=\\s|\\.|$)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), " ");
+        rules.put(Pattern.compile("\\bobscure\\s+version\\b", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("\\boriginal\\s+mix\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\(", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile(","), "");
@@ -77,7 +84,7 @@ public class FileNameSanitizer {
     public static String sanitize(String fileName) {
         if (fileName == null)
             return null;
-        String result = fileName.trim().toLowerCase();
+        String result = Normalizer.normalize(fileName, Normalizer.Form.NFKC).trim().toLowerCase();
         for (Map.Entry<Pattern, String> entry : rules.entrySet()) {
             result = entry.getKey().matcher(result).replaceAll(entry.getValue());
         }
