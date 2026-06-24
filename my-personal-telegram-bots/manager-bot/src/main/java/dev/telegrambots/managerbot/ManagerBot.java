@@ -177,8 +177,8 @@ public class ManagerBot extends TelegramLongPollingBot {
         String buildDir = app.buildSubPath.isBlank()
                 ? app.repoPath
                 : app.repoPath + "/" + app.buildSubPath;
-        send(chatId, "🔨 mvn package…");
-        ShellResult build = ShellRunner.run("mvn clean package -B -DskipTests -q", buildDir);
+        send(chatId, "🔨 " + app.buildCommand + "…");
+        ShellResult build = ShellRunner.run(app.buildCommand, buildDir);
         if (!build.isSuccess()) {
             send(chatId, "❌ Build failed:\n```\n" + truncate(build.combined(), 1000) + "\n```");
             return;
@@ -317,7 +317,7 @@ public class ManagerBot extends TelegramLongPollingBot {
             send(chatId, "ℹ️ *" + app.name + "* is already running (pids: " + String.join(", ", pids) + ").");
             return;
         }
-        ShellRunner.runDetached("java -jar " + app.jarPath, app.logPath);
+        ShellRunner.runDetached(app.startCommand, app.logPath);
         send(chatId, "🚀 Started *" + app.name + "*.");
     }
 
@@ -327,7 +327,7 @@ public class ManagerBot extends TelegramLongPollingBot {
             send(chatId, "🛑 Stopped " + killed + " old process(es).");
             try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
         }
-        ShellRunner.runDetached("java -jar " + app.jarPath, app.logPath);
+        ShellRunner.runDetached(app.startCommand, app.logPath);
         send(chatId, "🚀 *" + app.name + "* restarted.");
     }
 

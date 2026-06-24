@@ -13,6 +13,7 @@ public class AppRegistry {
 
     private static final String HOME = "/data/data/com.termux/files/home";
     private static final String LOG_BASE = HOME + "/termuxserver/src/sh/logs";
+    private static final String SH_BASE = HOME + "/termuxserver/src/sh";
 
     private static final Map<String, AppDefinition> APPS = new LinkedHashMap<>();
 
@@ -50,7 +51,9 @@ public class AppRegistry {
                 LOG_BASE + "/trace-keeper.log",
                 LOG_BASE + "/trace-keeper-error.log",
                 "trace-keeper",
-                "git@github.com:covenant-17/trace-keeper.git"
+                "git@github.com:covenant-17/trace-keeper.git",
+                "mvn clean package -Ptermux -B -DskipTests -q",
+                "bash " + SH_BASE + "/start-trace-keeper.sh"
         ));
 
         APPS.put("manager-bot", new AppDefinition(
