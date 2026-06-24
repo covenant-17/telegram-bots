@@ -27,6 +27,10 @@ public class AppDefinition {
     public final String errLogPath;
     /** String used to identify this app's process in ps output */
     public final String processPattern;
+    /** Maven command used for the main build step. */
+    public final String buildCommand;
+    /** Command used to start this app in the background. */
+    public final String startCommand;
     /**
      * Git remote URL for cloning the repo if {@code repoPath} does not exist yet.
      * Null means cloning is not supported (repo must be present manually).
@@ -43,6 +47,23 @@ public class AppDefinition {
             String errLogPath,
             String processPattern,
             String repoUrl) {
+        this(name, repoPath, buildSubPath, preBuildSubPath, jarPath, logPath, errLogPath,
+                processPattern, repoUrl, "mvn clean package -B -DskipTests -q",
+                "java -jar " + jarPath);
+    }
+
+    public AppDefinition(
+            String name,
+            String repoPath,
+            String buildSubPath,
+            String preBuildSubPath,
+            String jarPath,
+            String logPath,
+            String errLogPath,
+            String processPattern,
+            String repoUrl,
+            String buildCommand,
+            String startCommand) {
         this.name = name;
         this.repoPath = repoPath;
         this.buildSubPath = buildSubPath;
@@ -52,5 +73,7 @@ public class AppDefinition {
         this.errLogPath = errLogPath;
         this.processPattern = processPattern;
         this.repoUrl = repoUrl;
+        this.buildCommand = buildCommand;
+        this.startCommand = startCommand;
     }
 }
