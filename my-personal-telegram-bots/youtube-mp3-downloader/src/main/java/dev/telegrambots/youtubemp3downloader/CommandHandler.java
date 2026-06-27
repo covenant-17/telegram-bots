@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -77,6 +78,7 @@ public class CommandHandler {
                     int total = requests.size();
                     int[] done = {0};
                     int[] error = {0};
+                    AtomicInteger duplicateCount = new AtomicInteger(0);
                     java.util.List<String> errorDetails = new java.util.ArrayList<>();
                     java.util.concurrent.ExecutorService batchExec = java.util.concurrent.Executors.newFixedThreadPool(config.maxParallelDownloads);
                     java.util.List<java.util.concurrent.Callable<Void>> tasks = new java.util.ArrayList<>();
@@ -85,7 +87,7 @@ public class CommandHandler {
                         final DownloadRequest request = requests.get(i);
                         tasks.add(() -> {
                             try {
-                                boolean result = processRequestWithPreflight(telegram, message.getChatId(), request, idx + 1, total);
+                                boolean result = processRequestWithPreflight(telegram, message.getChatId(), request, idx + 1, total, duplicateCount);
                                 if (result) {
                                     synchronized (done) { done[0]++; }
                                 } else {
@@ -114,6 +116,7 @@ public class CommandHandler {
                     StringBuilder summary = new StringBuilder();
                     summary.append("\uD83C\uDF89 [SUMMARY] Batch complete!\n");
                     summary.append("[SUCCESS ✅] Processed: ").append(done[0]).append("\n");
+                    summary.append("[DUPLICATE ⚠️] Skipped: ").append(duplicateCount.get()).append("\n");
                     summary.append("[ERROR ☢️☣️] Failed: ").append(error[0]).append("\n");
                     summary.append("⏱️ Export time: ").append(elapsedSec).append(" seconds (" + (elapsedSec/60) + " min)\n");
                     if (!errorDetails.isEmpty()) {
@@ -126,7 +129,7 @@ public class CommandHandler {
             } else if (requests.size() == 1) {
                 telegram.sendText(message.getChatId(), "[SUCCESS ✅] Link accepted! 🎬 Starting processing...");
                 telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
-                executor.submit(() -> processRequestWithPreflight(telegram, message.getChatId(), requests.get(0), 1, 1));
+                executor.submit(() -> processRequestWithPreflight(telegram, message.getChatId(), requests.get(0), 1, 1, new AtomicInteger(0)));
                 return true;
             } else {
                 telegram.sendText(message.getChatId(), "[ERROR ☢️☣️] Please send a valid YouTube video link. 🚫");
@@ -161,7 +164,8 @@ public class CommandHandler {
                 pending.request(),
                 pending.index(),
                 pending.total(),
-                true
+                true,
+                new AtomicInteger(0)
         ));
         return true;
     }
@@ -180,7 +184,8 @@ public class CommandHandler {
                 pending.chatId(),
                 pending.request(),
                 pending.index(),
-                pending.total()
+                pending.total(),
+                new AtomicInteger(0)
         ));
         return true;
     }
@@ -231,7 +236,7 @@ public class CommandHandler {
      * @param total    The total number of URLs in the batch
      * @return true if the download was successful, false otherwise
      */
-    private static boolean processDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total, boolean forceDownload) {
+    private static boolean processDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total, boolean forceDownload, AtomicInteger duplicateCount) {
         String url = request.url();
         String chatId = chatIdLong.toString();
         final boolean[] sending = {true};
@@ -354,6 +359,7 @@ public class CommandHandler {
 
                 java.util.Optional<MusicDuplicateIndex.DuplicateMatch> duplicate = duplicateIndex.findDuplicate(baseFileName);
                 if (duplicate.isPresent()) {
+                    duplicateCount.incrementAndGet();
                     sendDuplicateWarning(telegram, chatIdLong, request, index, total, baseFileName, duplicate.get());
                     return true;
                 }
@@ -469,9 +475,9 @@ public class CommandHandler {
         return false;
     }
 
-    private static boolean processRequestWithPreflight(TelegramService telegram, Long chatId, DownloadRequest request, int index, int total) {
+    private static boolean processRequestWithPreflight(TelegramService telegram, Long chatId, DownloadRequest request, int index, int total, AtomicInteger duplicateCount) {
         if (request.hasClipRange()) {
-            return processDownloadWithStatus(telegram, chatId, request, index, total, false);
+            return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount);
         }
         try {
             YoutubeVideoMetadata metadata = ytDlpService.getVideoMetadata(request.url());
@@ -483,7 +489,7 @@ public class CommandHandler {
             logger.warn("[{}] Failed to inspect chapters for URL: {}. Falling back to regular flow.",
                     now(), request.url(), e);
         }
-        return processDownloadWithStatus(telegram, chatId, request, index, total, false);
+        return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount);
     }
 
     private static void sendChapterApproval(
@@ -531,7 +537,7 @@ public class CommandHandler {
         return ChapterTrackPlanner.build(metadata);
     }
 
-    private static boolean processChapterDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total) {
+    private static boolean processChapterDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total, AtomicInteger duplicateCount) {
         String url = request.url();
         String chatId = chatIdLong.toString();
         final boolean[] sending = {true};
@@ -577,6 +583,7 @@ public class CommandHandler {
             }
 
             if (toDownload.isEmpty()) {
+                duplicateCount.addAndGet(skipped.size());
                 telegram.sendText(chatIdLong, buildChapterSummary("All chapter tracks already exist. Nothing downloaded.", plans.size(), 0, skipped, java.util.List.of(), url));
                 return true;
             }
@@ -623,6 +630,7 @@ public class CommandHandler {
                 sent++;
             }
 
+            duplicateCount.addAndGet(skipped.size());
             telegram.sendText(chatIdLong, buildChapterSummary("Chapter split complete.", plans.size(), sent, skipped, failed, url));
             logger.info("[{}] [SendAudio] Sent {} chapter tracks for URL: {}", now(), sent, url);
             return failed.isEmpty();
