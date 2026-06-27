@@ -25,7 +25,9 @@ public class CommandHandler {
             config.cookiesFilePath);
     private static final MusicDuplicateIndex duplicateIndex = new MusicDuplicateIndex(config.duplicateIndexPath);
     private static final ConcurrentHashMap<String, PendingDownload> pendingDuplicateDownloads = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, PendingChapterDownload> pendingChapterDownloads = new ConcurrentHashMap<>();
     private static final String FORCE_DOWNLOAD_CALLBACK_PREFIX = "dupdl:";
+    private static final String CHAPTER_DOWNLOAD_CALLBACK_PREFIX = "chapdl:";
     private static final long PENDING_DOWNLOAD_TTL_MILLIS = 24L * 60L * 60L * 1000L;
 
     /**
@@ -83,7 +85,7 @@ public class CommandHandler {
                         final DownloadRequest request = requests.get(i);
                         tasks.add(() -> {
                             try {
-                                boolean result = processDownloadWithStatus(telegram, message.getChatId(), request, idx + 1, total, false);
+                                boolean result = processRequestWithPreflight(telegram, message.getChatId(), request, idx + 1, total);
                                 if (result) {
                                     synchronized (done) { done[0]++; }
                                 } else {
@@ -124,7 +126,7 @@ public class CommandHandler {
             } else if (requests.size() == 1) {
                 telegram.sendText(message.getChatId(), "[SUCCESS ✅] Link accepted! 🎬 Starting processing...");
                 telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
-                executor.submit(() -> processDownloadWithStatus(telegram, message.getChatId(), requests.get(0), 1, 1, false));
+                executor.submit(() -> processRequestWithPreflight(telegram, message.getChatId(), requests.get(0), 1, 1));
                 return true;
             } else {
                 telegram.sendText(message.getChatId(), "[ERROR ☢️☣️] Please send a valid YouTube video link. 🚫");
@@ -136,7 +138,13 @@ public class CommandHandler {
 
     private static boolean handleCallback(TelegramService telegram, CallbackQuery callbackQuery) {
         String data = callbackQuery.getData();
-        if (data == null || !data.startsWith(FORCE_DOWNLOAD_CALLBACK_PREFIX)) {
+        if (data == null) {
+            return false;
+        }
+        if (data.startsWith(CHAPTER_DOWNLOAD_CALLBACK_PREFIX)) {
+            return handleChapterCallback(telegram, callbackQuery, data);
+        }
+        if (!data.startsWith(FORCE_DOWNLOAD_CALLBACK_PREFIX)) {
             return false;
         }
         String id = data.substring(FORCE_DOWNLOAD_CALLBACK_PREFIX.length());
@@ -154,6 +162,25 @@ public class CommandHandler {
                 pending.index(),
                 pending.total(),
                 true
+        ));
+        return true;
+    }
+
+    private static boolean handleChapterCallback(TelegramService telegram, CallbackQuery callbackQuery, String data) {
+        String id = data.substring(CHAPTER_DOWNLOAD_CALLBACK_PREFIX.length());
+        PendingChapterDownload pending = pendingChapterDownloads.remove(id);
+        if (pending == null || pending.isExpired()) {
+            telegram.answerCallback(callbackQuery.getId(), "This chapter download expired. Send the link again.");
+            return true;
+        }
+        telegram.answerCallback(callbackQuery.getId(), "Chapter download queued.");
+        telegram.sendText(pending.chatId(), "[SUCCESS ✅] Chapter download approved. Starting processing...");
+        executor.submit(() -> processChapterDownloadWithStatus(
+                telegram,
+                pending.chatId(),
+                pending.request(),
+                pending.index(),
+                pending.total()
         ));
         return true;
     }
@@ -442,6 +469,252 @@ public class CommandHandler {
         return false;
     }
 
+    private static boolean processRequestWithPreflight(TelegramService telegram, Long chatId, DownloadRequest request, int index, int total) {
+        if (request.hasClipRange()) {
+            return processDownloadWithStatus(telegram, chatId, request, index, total, false);
+        }
+        try {
+            YoutubeVideoMetadata metadata = ytDlpService.getVideoMetadata(request.url());
+            if (metadata.hasMultipleChapters()) {
+                sendChapterApproval(telegram, chatId, request, index, total, metadata);
+                return true;
+            }
+        } catch (Exception e) {
+            logger.warn("[{}] Failed to inspect chapters for URL: {}. Falling back to regular flow.",
+                    now(), request.url(), e);
+        }
+        return processDownloadWithStatus(telegram, chatId, request, index, total, false);
+    }
+
+    private static void sendChapterApproval(
+            TelegramService telegram,
+            Long chatId,
+            DownloadRequest request,
+            int index,
+            int total,
+            YoutubeVideoMetadata metadata
+    ) {
+        cleanupExpiredPendingDownloads();
+        String id = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        pendingChapterDownloads.put(id, new PendingChapterDownload(chatId, request, index, total, System.currentTimeMillis()));
+
+        java.util.List<ChapterTrackPlan> plans = buildChapterTrackPlans(metadata);
+        StringBuilder message = new StringBuilder();
+        message.append("[CHAPTERS 🎼] Video has ").append(plans.size()).append(" tracks. (")
+                .append(index).append("/").append(total).append(")\n");
+        message.append("Channel: ").append(metadata.channel()).append("\n");
+        message.append("Video: ").append(metadata.title()).append("\n\n");
+
+        int previewCount = Math.min(plans.size(), 25);
+        for (int i = 0; i < previewCount; i++) {
+            ChapterTrackPlan plan = plans.get(i);
+            message.append(i + 1).append(". ")
+                    .append(plan.baseName()).append(" — ")
+                    .append(formatDuration(plan.chapter().durationSeconds()))
+                    .append("\n");
+        }
+        if (plans.size() > previewCount) {
+            message.append("...and ").append(plans.size() - previewCount).append(" more\n");
+        }
+        message.append("\nPress Download to split and send these tracks.");
+
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("Download");
+        button.setCallbackData(CHAPTER_DOWNLOAD_CALLBACK_PREFIX + id);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(java.util.List.of(java.util.List.of(button)));
+        telegram.sendText(chatId, message.toString(), markup);
+    }
+
+    static java.util.List<ChapterTrackPlan> buildChapterTrackPlans(YoutubeVideoMetadata metadata) {
+        return ChapterTrackPlanner.build(metadata);
+    }
+
+    private static boolean processChapterDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total) {
+        String url = request.url();
+        String chatId = chatIdLong.toString();
+        final boolean[] sending = {true};
+        Thread progressThread = new Thread(() -> {
+            while (sending[0]) {
+                telegram.sendChatAction(chatIdLong, ActionType.UPLOADDOCUMENT);
+                try { Thread.sleep(1000); } catch (InterruptedException e) {
+                    logger.warn("[{}] Chapter progress thread interrupted: {}", now(), e.getMessage(), e);
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        progressThread.start();
+
+        java.io.File fullAudioFile = null;
+        try {
+            YoutubeVideoMetadata metadata = ytDlpService.getVideoMetadata(url);
+            if (!metadata.hasMultipleChapters()) {
+                telegram.sendText(chatIdLong, "[ERROR ☢️☣️] No chapters found anymore. Try sending the link again. (" + index + "/" + total + ")\nURL: " + url);
+                return false;
+            }
+
+            java.io.File saveDir = Utils.getYoutubeMp3WorkzoneDir();
+            if (!saveDir.exists()) saveDir.mkdirs();
+            java.io.File tempDir = new java.io.File(saveDir, "temp_mp3");
+            if (!tempDir.exists()) tempDir.mkdirs();
+
+            java.util.List<ChapterTrackPlan> plans = buildChapterTrackPlans(metadata);
+            java.util.List<ChapterTrackPlan> toDownload = new java.util.ArrayList<>();
+            java.util.List<SkippedChapter> skipped = new java.util.ArrayList<>();
+
+            for (ChapterTrackPlan plan : plans) {
+                java.io.File finalAudioFile = new java.io.File(saveDir, plan.fileName());
+                if (finalAudioFile.exists() && finalAudioFile.length() > 0) {
+                    duplicateIndex.addOrUpdateDownloadedFile(plan.fileName(), finalAudioFile.toPath());
+                }
+                java.util.Optional<MusicDuplicateIndex.DuplicateMatch> duplicate = duplicateIndex.findDuplicate(plan.baseName());
+                if (duplicate.isPresent()) {
+                    skipped.add(new SkippedChapter(plan, duplicate.get()));
+                } else {
+                    toDownload.add(plan);
+                }
+            }
+
+            if (toDownload.isEmpty()) {
+                telegram.sendText(chatIdLong, buildChapterSummary("All chapter tracks already exist. Nothing downloaded.", plans.size(), 0, skipped, java.util.List.of(), url));
+                return true;
+            }
+
+            fullAudioFile = new java.io.File(tempDir, "chapters_source_" + System.currentTimeMillis() + ".mp3");
+            boolean audioOk = ytDlpService.downloadAudioWithThumbnail(url, fullAudioFile.getAbsolutePath());
+            if (!audioOk || !fullAudioFile.exists() || fullAudioFile.length() == 0) {
+                telegram.sendText(chatIdLong, "[ERROR ☢️☣️] Error downloading source audio for chapter split. (" + index + "/" + total + ")\nURL: " + url + " ❌");
+                return false;
+            }
+
+            java.util.List<String> failed = new java.util.ArrayList<>();
+            int sent = 0;
+            for (ChapterTrackPlan plan : toDownload) {
+                java.io.File chapterFile = new java.io.File(saveDir, plan.fileName());
+                ytDlpService.deleteFileIfExists(chapterFile);
+                boolean splitOk = ytDlpService.splitAudioRange(fullAudioFile, plan.chapter().clipRange(), chapterFile);
+                if (!splitOk || !chapterFile.exists() || chapterFile.length() == 0) {
+                    failed.add(plan.fileName() + " (split failed)");
+                    ytDlpService.deleteFileIfExists(chapterFile);
+                    continue;
+                }
+
+                double duration = ytDlpService.getAudioDurationSeconds(chapterFile.getAbsolutePath());
+                if (!ytDlpService.isDurationWithinLimit(duration)) {
+                    failed.add(plan.fileName() + " (too long: " + formatDuration(duration) + ")");
+                    ytDlpService.deleteFileIfExists(chapterFile);
+                    continue;
+                }
+                if (!ytDlpService.isFileSizeWithinLimit(chapterFile)) {
+                    failed.add(plan.fileName() + " (too large)");
+                    ytDlpService.deleteFileIfExists(chapterFile);
+                    continue;
+                }
+
+                StringBuilder msg = new StringBuilder();
+                msg.append("[SUCCESS ✅] Chapter audio ready! 🎶 ")
+                        .append(sent + 1).append("/").append(toDownload.size()).append("\n");
+                msg.append("After: ").append(plan.fileName()).append("\n");
+                msg.append("Range: ").append(plan.chapter().clipRange().formatLabel()).append("\n");
+                msg.append("YouTube: ").append(url);
+                duplicateIndex.addOrUpdateDownloadedFile(plan.fileName(), chapterFile.toPath());
+                telegram.sendAudio(chatId, chapterFile, msg.toString());
+                sent++;
+            }
+
+            telegram.sendText(chatIdLong, buildChapterSummary("Chapter split complete.", plans.size(), sent, skipped, failed, url));
+            logger.info("[{}] [SendAudio] Sent {} chapter tracks for URL: {}", now(), sent, url);
+            return failed.isEmpty();
+        } catch (IOException e) {
+            logger.error("[{}] IOException during chapter download: {} | URL: {}", now(), e.getMessage(), url, e);
+            telegram.sendText(chatIdLong, "[ERROR ☢️☣️] File or disk access error during chapter split. (" + index + "/" + total + ")\nURL: " + url + " 💾");
+        } catch (InterruptedException e) {
+            logger.error("[{}] Chapter download interrupted: {} | URL: {}", now(), e.getMessage(), url, e);
+            telegram.sendText(chatIdLong, "[ERROR ☢️☣️] Chapter operation was interrupted. (" + index + "/" + total + ")\nURL: " + url + " ⏹️");
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            logger.error("[{}] General chapter exception: {} | URL: {}", now(), e.getMessage(), url, e);
+            telegram.sendText(chatIdLong, "[ERROR ☢️☣️] Unexpected chapter split error. (" + index + "/" + total + ")\nURL: " + url + " ❌");
+        } finally {
+            sending[0] = false;
+            if (fullAudioFile != null) {
+                ytDlpService.deleteFileIfExists(fullAudioFile);
+            }
+            try {
+                progressThread.join();
+            } catch (InterruptedException e) {
+                logger.warn("[{}] Chapter progress thread join interrupted: {}", now(), e.getMessage(), e);
+                Thread.currentThread().interrupt();
+            }
+        }
+        return false;
+    }
+
+    private static String buildChapterSummary(
+            String title,
+            int total,
+            int sent,
+            java.util.List<SkippedChapter> skipped,
+            java.util.List<String> failed,
+            String url
+    ) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("[SUMMARY] ").append(title).append("\n");
+        msg.append("Total chapters: ").append(total).append("\n");
+        msg.append("Sent: ").append(sent).append("\n");
+        msg.append("Skipped duplicates: ").append(skipped.size()).append("\n");
+        msg.append("Failed: ").append(failed.size()).append("\n");
+        appendSkippedPreview(msg, skipped);
+        appendFailedPreview(msg, failed);
+        msg.append("\nYouTube: ").append(url);
+        return msg.toString();
+    }
+
+    private static void appendSkippedPreview(StringBuilder msg, java.util.List<SkippedChapter> skipped) {
+        if (skipped.isEmpty()) {
+            return;
+        }
+        msg.append("\nSkipped:\n");
+        int count = Math.min(skipped.size(), 10);
+        for (int i = 0; i < count; i++) {
+            SkippedChapter skippedChapter = skipped.get(i);
+            msg.append("- ").append(skippedChapter.plan().fileName())
+                    .append(" -> ").append(skippedChapter.duplicate().displayName())
+                    .append("\n");
+        }
+        if (skipped.size() > count) {
+            msg.append("...and ").append(skipped.size() - count).append(" more\n");
+        }
+    }
+
+    private static void appendFailedPreview(StringBuilder msg, java.util.List<String> failed) {
+        if (failed.isEmpty()) {
+            return;
+        }
+        msg.append("\nFailed:\n");
+        int count = Math.min(failed.size(), 10);
+        for (int i = 0; i < count; i++) {
+            msg.append("- ").append(failed.get(i)).append("\n");
+        }
+        if (failed.size() > count) {
+            msg.append("...and ").append(failed.size() - count).append(" more\n");
+        }
+    }
+
+    private static String formatDuration(double seconds) {
+        if (seconds < 0 || Double.isNaN(seconds) || Double.isInfinite(seconds)) {
+            return "unknown";
+        }
+        int rounded = (int) Math.round(seconds);
+        int hours = rounded / 3600;
+        int minutes = (rounded % 3600) / 60;
+        int secs = rounded % 60;
+        return hours > 0
+                ? String.format(java.util.Locale.US, "%d:%02d:%02d", hours, minutes, secs)
+                : String.format(java.util.Locale.US, "%d:%02d", minutes, secs);
+    }
+
     private static void sendDuplicateWarning(
             TelegramService telegram,
             Long chatId,
@@ -478,11 +751,21 @@ public class CommandHandler {
 
     private static void cleanupExpiredPendingDownloads() {
         pendingDuplicateDownloads.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        pendingChapterDownloads.entrySet().removeIf(entry -> entry.getValue().isExpired());
     }
 
     private record PendingDownload(Long chatId, DownloadRequest request, int index, int total, long createdAtMillis) {
         private boolean isExpired() {
             return System.currentTimeMillis() - createdAtMillis > PENDING_DOWNLOAD_TTL_MILLIS;
         }
+    }
+
+    private record PendingChapterDownload(Long chatId, DownloadRequest request, int index, int total, long createdAtMillis) {
+        private boolean isExpired() {
+            return System.currentTimeMillis() - createdAtMillis > PENDING_DOWNLOAD_TTL_MILLIS;
+        }
+    }
+
+    private record SkippedChapter(ChapterTrackPlan plan, MusicDuplicateIndex.DuplicateMatch duplicate) {
     }
 }
