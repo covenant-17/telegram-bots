@@ -1,6 +1,7 @@
 package dev.telegrambots.youtubemp3downloader;
 
 import org.telegram.telegrambots.meta.api.methods.ActionType;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
@@ -22,6 +23,22 @@ public class TelegramService {
             bot.sendTextMessage(chatId, text);
         } catch (Exception e) {
             logger.error("[{}] [Telegram] Failed to send text: {}", now(), text, e);
+        }
+    }
+
+    public void sendText(Long chatId, String text, InlineKeyboardMarkup replyMarkup) {
+        try {
+            bot.sendTextMessage(chatId, text, replyMarkup);
+        } catch (Exception e) {
+            logger.error("[{}] [Telegram] Failed to send text with keyboard: {}", now(), text, e);
+        }
+    }
+
+    public void answerCallback(String callbackQueryId, String text) {
+        try {
+            bot.answerCallback(callbackQueryId, text);
+        } catch (Exception e) {
+            logger.error("[{}] [Telegram] Failed to answer callback: {}", now(), callbackQueryId, e);
         }
     }
 

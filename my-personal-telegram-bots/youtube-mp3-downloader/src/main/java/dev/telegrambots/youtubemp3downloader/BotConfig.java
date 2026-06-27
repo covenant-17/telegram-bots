@@ -8,6 +8,7 @@ import dev.telegrambots.shared.BaseBotConfig;
  */
 public class BotConfig extends BaseBotConfig {
     public static final String MAX_PARALLEL_DOWNLOADS_PROPERTY = "max.parallel.downloads";
+    public static final String DUPLICATE_INDEX_PATH_PROPERTY = "duplicate.index.path";
     public static final int DEFAULT_MAX_PARALLEL_DOWNLOADS = 3;
 
     public final String botToken;
@@ -17,6 +18,7 @@ public class BotConfig extends BaseBotConfig {
     public final String ffprobePath;
     public final int maxParallelDownloads;
     public final String cookiesFilePath;
+    public final String duplicateIndexPath;
 
     /**
      * Constructor that loads configuration from config.properties.
@@ -47,6 +49,9 @@ public class BotConfig extends BaseBotConfig {
         
         // Optional: path to YouTube cookies file for bot-detection bypass
         this.cookiesFilePath = getStringProperty("yt-dlp.cookies.path", "");
+
+        // Optional: TSV index generated from an external music library.
+        this.duplicateIndexPath = getStringProperty(DUPLICATE_INDEX_PATH_PROPERTY, "");
         
         // Validate configuration after all fields are initialized
         validateConfiguration();

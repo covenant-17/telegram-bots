@@ -38,6 +38,14 @@ max.parallel.downloads=3
 # Leave empty to disable (default)
 yt-dlp.cookies.path=
 
+# Duplicate detection (optional)
+# Build this file with:
+# java -cp youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar dev.telegrambots.youtubemp3downloader.MusicDuplicateIndexCli C:/Music C:/tmp/music-duplicate-index.tsv
+# Copy the TSV to the server and set the server-side path here.
+# Example: duplicate.index.path=/data/data/com.termux/files/home/termuxserver/src/music-duplicate-index.tsv
+# Leave empty to disable duplicate detection.
+duplicate.index.path=
+
 # Configuration Instructions:
 # 1. Copy this file to config.properties
 # 2. Replace YOUR_BOT_TOKEN_HERE with your actual bot token from @BotFather

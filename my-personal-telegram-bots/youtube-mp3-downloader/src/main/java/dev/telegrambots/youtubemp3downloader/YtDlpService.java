@@ -212,6 +212,71 @@ public class YtDlpService {
         return Utils.isFileSizeWithinLimit(file, maxFileSize);
     }
 
+    public boolean trimAudioRange(File audioFile, AudioClipRange range) throws IOException, InterruptedException {
+        if (audioFile == null || range == null || !audioFile.exists() || audioFile.length() == 0) {
+            return false;
+        }
+
+        File parent = audioFile.getParentFile();
+        String name = audioFile.getName();
+        String baseName = name.toLowerCase().endsWith(".mp3") ? name.substring(0, name.length() - 4) : name;
+        File trimmedFile = new File(parent, baseName + "_clip_" + System.currentTimeMillis() + ".mp3");
+
+        double clipDuration = range.durationSeconds();
+        double fadeDuration = Math.min(AudioClipRange.FADE_SECONDS, clipDuration / 2.0);
+        double fadeOutStart = Math.max(0.0, clipDuration - fadeDuration);
+        String audioFilter = String.format(java.util.Locale.US,
+                "afade=t=in:st=0:d=%.3f,afade=t=out:st=%.3f:d=%.3f",
+                fadeDuration, fadeOutStart, fadeDuration);
+
+        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
+                ffmpegPath,
+                "-y",
+                "-i", audioFile.getAbsolutePath(),
+                "-ss", formatSeconds(range.startSeconds()),
+                "-t", formatSeconds(clipDuration),
+                "-map", "0:a:0",
+                "-vn",
+                "-af", audioFilter,
+                "-c:a", "libmp3lame",
+                "-b:a", "320k",
+                trimmedFile.getAbsolutePath()
+        ));
+
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectErrorStream(true);
+        logger.info("[{}] [ffmpeg-trim] Command: {}", now(), String.join(" ", pb.command()));
+        Process process = pb.start();
+        StringBuilder output = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                logger.info("[{}] [ffmpeg-trim] {}", now(), line);
+                output.append(line).append("\n");
+            }
+        }
+        int exitCode = process.waitFor();
+        if (exitCode != 0 || !trimmedFile.exists() || trimmedFile.length() == 0) {
+            logger.error("[{}] [ffmpeg-trim] Failed to trim {} to {}. Exit code: {}. Output:\n{}",
+                    now(), audioFile.getAbsolutePath(), range.formatLabel(), exitCode, output);
+            trimmedFile.delete();
+            return false;
+        }
+
+        java.nio.file.Files.move(
+                trimmedFile.toPath(),
+                audioFile.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING
+        );
+        logger.info("[{}] [ffmpeg-trim] Trimmed file saved to: {} | Range: {}",
+                now(), audioFile.getAbsolutePath(), range.formatLabel());
+        return true;
+    }
+
+    private static String formatSeconds(double seconds) {
+        return String.format(java.util.Locale.US, "%.3f", seconds);
+    }
+
     public boolean isDurationWithinLimit(double durationSeconds) {
         return Utils.isDurationWithinLimit(durationSeconds, maxDurationMinutes);
     }public String[] getVideoInfo(String url) throws IOException, InterruptedException {
