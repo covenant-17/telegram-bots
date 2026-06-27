@@ -102,3 +102,4 @@ ffmpeg2pass-0.log.mbtree
 # Configuration files (should not be committed)
 config.properties
 *.properties
+!src/test/resources/config.properties

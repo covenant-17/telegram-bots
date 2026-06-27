@@ -3,9 +3,12 @@ package dev.telegrambots.youtubemp3downloader;
 import dev.telegrambots.shared.BaseBotConfig;
 // Telegram Bots API - Core bot functionality
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 // Logging framework for comprehensive bot monitoring
 import org.slf4j.Logger;
@@ -62,13 +65,36 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     public void sendTextMessage(Long chatId, String text) {
-        org.telegram.telegrambots.meta.api.methods.send.SendMessage message = new org.telegram.telegrambots.meta.api.methods.send.SendMessage();
+        SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
         try {
             execute(message);
         } catch (TelegramApiException e) {
             logger.error("Failed to send text message to chat {}: {}", chatId, e.getMessage(), e);
+        }
+    }
+
+    public void sendTextMessage(Long chatId, String text, InlineKeyboardMarkup replyMarkup) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        message.setReplyMarkup(replyMarkup);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to send text message with keyboard to chat {}: {}", chatId, e.getMessage(), e);
+        }
+    }
+
+    public void answerCallback(String callbackQueryId, String text) {
+        AnswerCallbackQuery answer = new AnswerCallbackQuery();
+        answer.setCallbackQueryId(callbackQueryId);
+        answer.setText(text);
+        try {
+            execute(answer);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to answer callback {}: {}", callbackQueryId, e.getMessage(), e);
         }
     }
 

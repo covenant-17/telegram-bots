@@ -3,13 +3,18 @@ package dev.telegrambots.youtubemp3downloader;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 public class CommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(CommandHandler.class);
@@ -18,6 +23,10 @@ public class CommandHandler {
     private static final YtDlpService ytDlpService = new YtDlpService(
             config.ytDlpPath, config.ffmpegPath, config.ffprobePath, config.maxFileSize, config.maxDurationMinutes,
             config.cookiesFilePath);
+    private static final MusicDuplicateIndex duplicateIndex = new MusicDuplicateIndex(config.duplicateIndexPath);
+    private static final ConcurrentHashMap<String, PendingDownload> pendingDuplicateDownloads = new ConcurrentHashMap<>();
+    private static final String FORCE_DOWNLOAD_CALLBACK_PREFIX = "dupdl:";
+    private static final long PENDING_DOWNLOAD_TTL_MILLIS = 24L * 60L * 60L * 1000L;
 
     /**
      * Returns the current date and time as a formatted string (yyyy-MM-dd HH:mm:ss).
@@ -46,6 +55,9 @@ public class CommandHandler {
      * @return true if the update was handled, false otherwise
      */    public static boolean handle(Bot bot, Update update) {
         TelegramService telegram = new TelegramService(bot);
+        if (update.hasCallbackQuery()) {
+            return handleCallback(telegram, update.getCallbackQuery());
+        }
         if (update.hasMessage() && update.getMessage() != null && update.getMessage().hasText()) {
             Message message = update.getMessage();
             String text = message.getText();
@@ -54,40 +66,34 @@ public class CommandHandler {
             if (text == null) {
                 return false;
             }
-            java.util.regex.Pattern urlPattern = java.util.regex.Pattern.compile("https?://(?:www\\.)?(?:youtube\\.com/(?:watch\\?v=|shorts/)|youtu\\.be/)[\\w-]{11}");
-            java.util.regex.Matcher matcher = urlPattern.matcher(text);
-            java.util.Set<String> urlSet = new java.util.LinkedHashSet<>();
-            while (matcher.find()) {
-                urlSet.add(matcher.group());
-            }
-            java.util.List<String> urls = new java.util.ArrayList<>(urlSet);
-            if (urls.size() > 1) {
+            java.util.List<DownloadRequest> requests = DownloadRequestParser.parse(text);
+            if (requests.size() > 1) {
                 long batchStart = System.currentTimeMillis();
-                int approxSec = (int)Math.ceil(urls.size() * 60.0 / config.maxParallelDownloads); // 1 minute per link, parallel processing
-                telegram.sendText(message.getChatId(), "🤯 Detected " + urls.size() + " YouTube links! Up to " + config.maxParallelDownloads + " will be processed in parallel. Files will be sent as soon as each is ready.\nApproximate export time: " + approxSec + " seconds (" + (approxSec/60) + " min)");
+                int approxSec = (int)Math.ceil(requests.size() * 60.0 / config.maxParallelDownloads); // 1 minute per link, parallel processing
+                telegram.sendText(message.getChatId(), "🤯 Detected " + requests.size() + " YouTube links! Up to " + config.maxParallelDownloads + " will be processed in parallel. Files will be sent as soon as each is ready.\nApproximate export time: " + approxSec + " seconds (" + (approxSec/60) + " min)");
                 new Thread(() -> {
-                    int total = urls.size();
+                    int total = requests.size();
                     int[] done = {0};
                     int[] error = {0};
                     java.util.List<String> errorDetails = new java.util.ArrayList<>();
                     java.util.concurrent.ExecutorService batchExec = java.util.concurrent.Executors.newFixedThreadPool(config.maxParallelDownloads);
                     java.util.List<java.util.concurrent.Callable<Void>> tasks = new java.util.ArrayList<>();
-                    for (int i = 0; i < urls.size(); i++) {
+                    for (int i = 0; i < requests.size(); i++) {
                         final int idx = i;
-                        final String url = urls.get(i);
+                        final DownloadRequest request = requests.get(i);
                         tasks.add(() -> {
                             try {
-                                boolean result = processDownloadWithStatus(telegram, message, url, idx + 1, total);
+                                boolean result = processDownloadWithStatus(telegram, message.getChatId(), request, idx + 1, total, false);
                                 if (result) {
                                     synchronized (done) { done[0]++; }
                                 } else {
                                     synchronized (error) { error[0]++; }
-                                    synchronized (errorDetails) { errorDetails.add(url); }
+                                    synchronized (errorDetails) { errorDetails.add(request.url()); }
                                 }
                             } catch (Exception ex) {
                                 synchronized (error) { error[0]++; }
-                                synchronized (errorDetails) { errorDetails.add(url + " (" + ex.getClass().getSimpleName() + ": " + ex.getMessage() + ")"); }
-                                logger.error("[{}] Error processing URL: {}\n{}", now(), url, ex.getMessage(), ex);
+                                synchronized (errorDetails) { errorDetails.add(request.url() + " (" + ex.getClass().getSimpleName() + ": " + ex.getMessage() + ")"); }
+                                logger.error("[{}] Error processing URL: {}\n{}", now(), request.url(), ex.getMessage(), ex);
                             }
                             return null;
                         });
@@ -115,10 +121,10 @@ public class CommandHandler {
                     telegram.sendText(message.getChatId(), summary.toString());
                 }).start();
                 return true;
-            } else if (urls.size() == 1 && Utils.isValidYouTubeUrl(text)) {
+            } else if (requests.size() == 1) {
                 telegram.sendText(message.getChatId(), "[SUCCESS ✅] Link accepted! 🎬 Starting processing...");
                 telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
-                executor.submit(() -> processDownloadWithStatus(telegram, message, text, 1, 1));
+                executor.submit(() -> processDownloadWithStatus(telegram, message.getChatId(), requests.get(0), 1, 1, false));
                 return true;
             } else {
                 telegram.sendText(message.getChatId(), "[ERROR ☢️☣️] Please send a valid YouTube video link. 🚫");
@@ -126,6 +132,30 @@ public class CommandHandler {
             }
         }
         return false;
+    }
+
+    private static boolean handleCallback(TelegramService telegram, CallbackQuery callbackQuery) {
+        String data = callbackQuery.getData();
+        if (data == null || !data.startsWith(FORCE_DOWNLOAD_CALLBACK_PREFIX)) {
+            return false;
+        }
+        String id = data.substring(FORCE_DOWNLOAD_CALLBACK_PREFIX.length());
+        PendingDownload pending = pendingDuplicateDownloads.remove(id);
+        if (pending == null || pending.isExpired()) {
+            telegram.answerCallback(callbackQuery.getId(), "This duplicate action expired. Send the link again.");
+            return true;
+        }
+        telegram.answerCallback(callbackQuery.getId(), "Queued for download.");
+        telegram.sendText(pending.chatId(), "[SUCCESS ✅] Forced download queued. Starting processing...");
+        executor.submit(() -> processDownloadWithStatus(
+                telegram,
+                pending.chatId(),
+                pending.request(),
+                pending.index(),
+                pending.total(),
+                true
+        ));
+        return true;
     }
 
     /**
@@ -174,12 +204,13 @@ public class CommandHandler {
      * @param total    The total number of URLs in the batch
      * @return true if the download was successful, false otherwise
      */
-    private static boolean processDownloadWithStatus(TelegramService telegram, Message message, String url, int index, int total) {
-        String chatId = message.getChatId().toString();
+    private static boolean processDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total, boolean forceDownload) {
+        String url = request.url();
+        String chatId = chatIdLong.toString();
         final boolean[] sending = {true};
         Thread progressThread = new Thread(() -> {
             while (sending[0]) {
-                telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
+                telegram.sendChatAction(chatIdLong, ActionType.UPLOADDOCUMENT);
                 try { Thread.sleep(1000); } catch (InterruptedException e) {
                     logger.warn("[{}] InterruptedException occurred: {}", now(), e.getMessage(), e);
                     Thread.currentThread().interrupt(); // Restore interrupted status
@@ -222,7 +253,7 @@ public class CommandHandler {
                 } else {
                     logger.warn("[{}] Non-JSON response received. Attempting fallback processing.", now());
                     telegram.sendText(Long.valueOf(chatId), "[WARNING ⚠️] Metadata could not be parsed, but we will attempt to process the audio.");
-                    telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT); // Continue showing loader
+                    telegram.sendChatAction(chatIdLong, ActionType.UPLOADDOCUMENT); // Continue showing loader
                     // Continue processing without metadata
                 }
             } else {
@@ -288,22 +319,41 @@ public class CommandHandler {
             if (!saveDir.exists()) saveDir.mkdirs();
             String finalFile = baseFileName + ".mp3";
             java.io.File finalAudioFile = new java.io.File(saveDir, finalFile);
+
+            if (!forceDownload && !request.hasClipRange()) {
+                java.util.Optional<MusicDuplicateIndex.DuplicateMatch> duplicate = duplicateIndex.findDuplicate(baseFileName);
+                if (duplicate.isPresent()) {
+                    sendDuplicateWarning(telegram, chatIdLong, request, index, total, baseFileName, duplicate.get());
+                    return true;
+                }
+            }
+
             ytDlpService.deleteFileIfExists(finalAudioFile);
 
             // 4. Download audio
             boolean success = ytDlpService.downloadAudioWithThumbnail(url, finalAudioFile.getAbsolutePath());
             if (!success && !finalAudioFile.exists()) {
-                telegram.sendText(message.getChatId(), "[ERROR ☢️☣️] Error downloading or converting audio. Check the link or try another video. (" + index + "/" + total + ")\nURL: " + url + " ❌");
+                telegram.sendText(chatIdLong, "[ERROR ☢️☣️] Error downloading or converting audio. Check the link or try another video. (" + index + "/" + total + ")\nURL: " + url + " ❌");
                 return false;
             }
 
+            if (request.hasClipRange()) {
+                telegram.sendChatAction(chatIdLong, ActionType.TYPING);
+                boolean clipOk = ytDlpService.trimAudioRange(finalAudioFile, request.clipRange());
+                if (!clipOk) {
+                    telegram.sendText(chatIdLong, "[ERROR ☢️☣️] Error trimming audio range " + request.clipRange().formatLabel() + ". (" + index + "/" + total + ")\nURL: " + url + " ✂️");
+                    ytDlpService.deleteFileIfExists(finalAudioFile);
+                    return false;
+                }
+            }
+
             // 5. Check limits
-            telegram.sendChatAction(message.getChatId(), ActionType.TYPING);
+            telegram.sendChatAction(chatIdLong, ActionType.TYPING);
             if (!finalAudioFile.exists() || finalAudioFile.length() == 0) {
                 logger.error("[{}] [FileNotFound] Downloaded file does not exist or is empty: {} | URL: {}", 
                             now(), finalAudioFile.getAbsolutePath(), url);
                 String errMsg = "[ERROR ☢️☣️] Download failed. The audio file is too large (over " + (config.maxFileSize / 1024 / 1024) + " MB) or the video is unavailable. (" + index + "/" + total + ")\nURL: " + url + " ❓";
-                telegram.sendText(message.getChatId(), errMsg);
+                telegram.sendText(chatIdLong, errMsg);
                 ytDlpService.deleteFileIfExists(finalAudioFile);
                 return false;
             }
@@ -311,7 +361,7 @@ public class CommandHandler {
             if (!ytDlpService.isDurationWithinLimit(durationAfterDownload)) {
                 logger.warn("[{}] [DurationLimit] Video too long: {} seconds | URL: {} | Expected limit: {} seconds", now(), durationAfterDownload, url, 30 * 60);
                 String errMsg = "[ERROR ☢️☣️] Video is too long (over 30 minutes). Try another video. (" + index + "/" + total + ")\nURL: " + url + " ⏳";
-                telegram.sendText(message.getChatId(), errMsg);
+                telegram.sendText(chatIdLong, errMsg);
                 ytDlpService.deleteFileIfExists(finalAudioFile);
                 return false;
             }
@@ -323,17 +373,17 @@ public class CommandHandler {
                     logger.error("[{}] [DownloadFailed] Downloaded file is empty: {} | URL: {} | Possible causes: video unavailable, age-restricted, or blocked", 
                                now(), finalAudioFile.getAbsolutePath(), url);
                     String errMsg = "[ERROR ☢️☣️] Failed to download video. Video may be unavailable, age-restricted, or blocked by YouTube. (" + index + "/" + total + ")\nURL: " + url + " 🚫\n\n🔍 Debug: Empty file (0 bytes) - usually means YouTube blocked access or video is restricted.";
-                    telegram.sendText(message.getChatId(), errMsg);
+                    telegram.sendText(chatIdLong, errMsg);
                 } else if (fileSize > 0) {
                     logger.warn("[{}] [FileSizeLimit] File too large: {} bytes | URL: {} | Expected limit: {} bytes", 
                                now(), fileSize, url, 50 * 1024 * 1024);
                     String errMsg = "[ERROR ☢️☣️] Audio file exceeds 50 MB (" + String.format("%.2f MB", fileSize / 1024.0 / 1024.0) + "). Try another video. (" + index + "/" + total + ")\nURL: " + url + " 💾";
-                    telegram.sendText(message.getChatId(), errMsg);
+                    telegram.sendText(chatIdLong, errMsg);
                 } else {
                     logger.error("[{}] [FileNotFound] Downloaded file does not exist: {} | URL: {}", 
                                 now(), finalAudioFile.getAbsolutePath(), url);
                     String errMsg = "[ERROR ☢️☣️] Download failed. File not found. (" + index + "/" + total + ")\nURL: " + url + " ❓";
-                    telegram.sendText(message.getChatId(), errMsg);
+                    telegram.sendText(chatIdLong, errMsg);
                 }
                 
                 ytDlpService.deleteFileIfExists(finalAudioFile);
@@ -353,6 +403,9 @@ public class CommandHandler {
             msg.append("\uD83C\uDFB5 Song renamed\n");
             msg.append("\uD83D\uDD22 Before: ").append(beforeName).append("\n");
             msg.append("\uD83D\uDD01 After:  ").append(afterName);
+            if (request.hasClipRange()) {
+                msg.append("\nCUTTED ").append(request.clipRange().formatLabel());
+            }
             msg.append("\n🔗 YouTube: ").append(url); // Add YouTube link
             if (fallbackUsed) {
                 msg.append("\n\nTitle taken from <title> tag of YouTube page (curl fallback)");
@@ -363,15 +416,15 @@ public class CommandHandler {
         } catch (IOException e) {
             logger.error("[{}] IOException occurred: {} | URL: {} ({} / {})", now(), e.getMessage(), url, index, total, e);
             String errMsg = "[ERROR ☢️☣️] File or disk access error: (" + index + "/" + total + ")\nURL: " + url + " 💾";
-            telegram.sendText(message.getChatId(), errMsg);
+            telegram.sendText(chatIdLong, errMsg);
         } catch (InterruptedException e) {
             logger.error("[{}] InterruptedException occurred: {} | URL: {} ({} / {})", now(), e.getMessage(), url, index, total, e);
             String errMsg = "[ERROR ☢️☣️] Operation was interrupted: (" + index + "/" + total + ")\nURL: " + url + " ⏹️";
-            telegram.sendText(message.getChatId(), errMsg);
+            telegram.sendText(chatIdLong, errMsg);
         } catch (Exception e) {
             logger.error("[{}] General exception occurred: {} | URL: {} ({} / {})", now(), e.getMessage(), url, index, total, e);
             String errMsg = "[ERROR ☢️☣️] An unexpected error occurred: (" + index + "/" + total + ")\nURL: " + url + " ❌";
-            telegram.sendText(message.getChatId(), errMsg);
+            telegram.sendText(chatIdLong, errMsg);
         } finally {
             sending[0] = false; // Stop the progress thread
             try {
@@ -382,5 +435,49 @@ public class CommandHandler {
             }
         }
         return false;
+    }
+
+    private static void sendDuplicateWarning(
+            TelegramService telegram,
+            Long chatId,
+            DownloadRequest request,
+            int index,
+            int total,
+            String candidateName,
+            MusicDuplicateIndex.DuplicateMatch duplicate
+    ) {
+        cleanupExpiredPendingDownloads();
+        String id = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        pendingDuplicateDownloads.put(id, new PendingDownload(chatId, request, index, total, System.currentTimeMillis()));
+
+        StringBuilder message = new StringBuilder();
+        message.append("[DUPLICATE ⚠️] Skipped download: this track already exists in the music library. (")
+                .append(index).append("/").append(total).append(")\n");
+        message.append("Requested: ").append(candidateName).append(".mp3\n");
+        message.append("Found: ").append(duplicate.displayName());
+        if (duplicate.path() != null && !duplicate.path().isBlank()) {
+            message.append("\nPath: ").append(duplicate.path());
+        }
+        message.append("\nMatch: ").append(duplicate.matchType())
+                .append(" ").append(String.format(java.util.Locale.US, "%.0f%%", duplicate.score() * 100));
+        message.append("\n\nUse the button below to download anyway.");
+
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("Download anyway");
+        button.setCallbackData(FORCE_DOWNLOAD_CALLBACK_PREFIX + id);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(java.util.List.of(java.util.List.of(button)));
+        telegram.sendText(chatId, message.toString(), markup);
+    }
+
+    private static void cleanupExpiredPendingDownloads() {
+        pendingDuplicateDownloads.entrySet().removeIf(entry -> entry.getValue().isExpired());
+    }
+
+    private record PendingDownload(Long chatId, DownloadRequest request, int index, int total, long createdAtMillis) {
+        private boolean isExpired() {
+            return System.currentTimeMillis() - createdAtMillis > PENDING_DOWNLOAD_TTL_MILLIS;
+        }
     }
 }
