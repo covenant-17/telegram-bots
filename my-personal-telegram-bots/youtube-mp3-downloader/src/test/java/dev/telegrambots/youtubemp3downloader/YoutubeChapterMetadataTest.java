@@ -31,6 +31,45 @@ class YoutubeChapterMetadataTest {
     }
 
     @Test
+    void ignoresChaptersForVideosShorterThanFiveMinutes() {
+        String json = """
+                {
+                  "uploader": "Short Channel",
+                  "title": "Short With Chapters",
+                  "duration": 299,
+                  "chapters": [
+                    {"start_time": 0.0, "end_time": 120.0, "title": "One"},
+                    {"start_time": 120.0, "end_time": 299.0, "title": "Two"}
+                  ]
+                }
+                """;
+
+        YoutubeVideoMetadata metadata = YtDlpService.parseVideoMetadataJson(json);
+
+        assertEquals(2, metadata.chapters().size());
+        assertFalse(metadata.hasMultipleChapters());
+    }
+
+    @Test
+    void allowsChaptersAtFiveMinutes() {
+        String json = """
+                {
+                  "uploader": "Long Channel",
+                  "title": "Five Minutes",
+                  "duration": 300,
+                  "chapters": [
+                    {"start_time": 0.0, "end_time": 120.0, "title": "One"},
+                    {"start_time": 120.0, "end_time": 300.0, "title": "Two"}
+                  ]
+                }
+                """;
+
+        YoutubeVideoMetadata metadata = YtDlpService.parseVideoMetadataJson(json);
+
+        assertTrue(metadata.hasMultipleChapters());
+    }
+
+    @Test
     void fillsMissingChapterEndFromNextStartOrVideoDuration() {
         String json = """
                 {
