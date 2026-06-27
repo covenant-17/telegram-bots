@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 public class YtDlpService {
     private static final Logger logger = LoggerFactory.getLogger(YtDlpService.class);
@@ -212,6 +213,31 @@ public class YtDlpService {
         return Utils.isFileSizeWithinLimit(file, maxFileSize);
     }
 
+    public boolean splitAudioRange(File sourceFile, AudioClipRange range, File outputFile) throws IOException, InterruptedException {
+        if (sourceFile == null || range == null || outputFile == null || !sourceFile.exists() || sourceFile.length() == 0) {
+            return false;
+        }
+        File parent = outputFile.getParentFile();
+        if (parent != null) {
+            parent.mkdirs();
+        }
+        File tempOutput = new File(
+                parent != null ? parent : new File("."),
+                stripMp3Extension(outputFile.getName()) + "_split_" + System.currentTimeMillis() + ".mp3"
+        );
+
+        boolean splitOk = writeAudioRange(sourceFile, range, tempOutput, "[ffmpeg-split]");
+        if (!splitOk) {
+            tempOutput.delete();
+            return false;
+        }
+
+        Files.move(tempOutput.toPath(), outputFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        logger.info("[{}] [ffmpeg-split] Split file saved to: {} | Range: {}",
+                now(), outputFile.getAbsolutePath(), range.formatLabel());
+        return true;
+    }
+
     public boolean trimAudioRange(File audioFile, AudioClipRange range) throws IOException, InterruptedException {
         if (audioFile == null || range == null || !audioFile.exists() || audioFile.length() == 0) {
             return false;
@@ -219,46 +245,11 @@ public class YtDlpService {
 
         File parent = audioFile.getParentFile();
         String name = audioFile.getName();
-        String baseName = name.toLowerCase().endsWith(".mp3") ? name.substring(0, name.length() - 4) : name;
+        String baseName = stripMp3Extension(name);
         File trimmedFile = new File(parent, baseName + "_clip_" + System.currentTimeMillis() + ".mp3");
 
-        double clipDuration = range.durationSeconds();
-        double fadeDuration = Math.min(AudioClipRange.FADE_SECONDS, clipDuration / 2.0);
-        double fadeOutStart = Math.max(0.0, clipDuration - fadeDuration);
-        String audioFilter = String.format(java.util.Locale.US,
-                "afade=t=in:st=0:d=%.3f,afade=t=out:st=%.3f:d=%.3f",
-                fadeDuration, fadeOutStart, fadeDuration);
-
-        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
-                ffmpegPath,
-                "-y",
-                "-i", audioFile.getAbsolutePath(),
-                "-ss", formatSeconds(range.startSeconds()),
-                "-t", formatSeconds(clipDuration),
-                "-map", "0:a:0",
-                "-vn",
-                "-af", audioFilter,
-                "-c:a", "libmp3lame",
-                "-b:a", "320k",
-                trimmedFile.getAbsolutePath()
-        ));
-
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        pb.redirectErrorStream(true);
-        logger.info("[{}] [ffmpeg-trim] Command: {}", now(), String.join(" ", pb.command()));
-        Process process = pb.start();
-        StringBuilder output = new StringBuilder();
-        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logger.info("[{}] [ffmpeg-trim] {}", now(), line);
-                output.append(line).append("\n");
-            }
-        }
-        int exitCode = process.waitFor();
-        if (exitCode != 0 || !trimmedFile.exists() || trimmedFile.length() == 0) {
-            logger.error("[{}] [ffmpeg-trim] Failed to trim {} to {}. Exit code: {}. Output:\n{}",
-                    now(), audioFile.getAbsolutePath(), range.formatLabel(), exitCode, output);
+        boolean trimOk = writeAudioRange(audioFile, range, trimmedFile, "[ffmpeg-trim]");
+        if (!trimOk) {
             trimmedFile.delete();
             return false;
         }
@@ -273,13 +264,170 @@ public class YtDlpService {
         return true;
     }
 
+    private boolean writeAudioRange(File inputFile, AudioClipRange range, File outputFile, String logPrefix) throws IOException, InterruptedException {
+        double clipDuration = range.durationSeconds();
+        double fadeDuration = Math.min(AudioClipRange.FADE_SECONDS, clipDuration / 2.0);
+        double fadeOutStart = Math.max(0.0, clipDuration - fadeDuration);
+        String audioFilter = String.format(java.util.Locale.US,
+                "afade=t=in:st=0:d=%.3f,afade=t=out:st=%.3f:d=%.3f",
+                fadeDuration, fadeOutStart, fadeDuration);
+
+        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
+                ffmpegPath,
+                "-y",
+                "-i", inputFile.getAbsolutePath(),
+                "-ss", formatSeconds(range.startSeconds()),
+                "-t", formatSeconds(clipDuration),
+                "-map", "0:a:0",
+                "-vn",
+                "-af", audioFilter,
+                "-c:a", "libmp3lame",
+                "-b:a", "320k",
+                outputFile.getAbsolutePath()
+        ));
+
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectErrorStream(true);
+        logger.info("[{}] {} Command: {}", now(), logPrefix, String.join(" ", pb.command()));
+        Process process = pb.start();
+        StringBuilder output = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                logger.info("[{}] {} {}", now(), logPrefix, line);
+                output.append(line).append("\n");
+            }
+        }
+        int exitCode = process.waitFor();
+        if (exitCode != 0 || !outputFile.exists() || outputFile.length() == 0) {
+            logger.error("[{}] {} Failed to write {} to {}. Exit code: {}. Output:\n{}",
+                    now(), logPrefix, inputFile.getAbsolutePath(), range.formatLabel(), exitCode, output);
+            return false;
+        }
+        return true;
+    }
+
+    private static String stripMp3Extension(String name) {
+        return name != null && name.toLowerCase(java.util.Locale.ROOT).endsWith(".mp3")
+                ? name.substring(0, name.length() - 4)
+                : name;
+    }
+
     private static String formatSeconds(double seconds) {
         return String.format(java.util.Locale.US, "%.3f", seconds);
     }
 
     public boolean isDurationWithinLimit(double durationSeconds) {
         return Utils.isDurationWithinLimit(durationSeconds, maxDurationMinutes);
-    }public String[] getVideoInfo(String url) throws IOException, InterruptedException {
+    }
+
+    public YoutubeVideoMetadata getVideoMetadata(String url) throws IOException, InterruptedException {
+        if (url == null || url.trim().isEmpty()) {
+            return new YoutubeVideoMetadata("channel", "video", -1, java.util.List.of());
+        }
+
+        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
+                ytDlpPath,
+                "--dump-json",
+                "--no-download",
+                "--ignore-no-formats-error"
+        ));
+        cmd.addAll(commonYtDlpArgs());
+        cmd.add(url);
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectErrorStream(true);
+        logger.debug("[{}] [yt-dlp-metadata] Command: {}", now(), String.join(" ", pb.command()));
+        Process process = pb.start();
+
+        StringBuilder output = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append('\n');
+            }
+        }
+
+        int exitCode = process.waitFor();
+        String json = extractJsonObject(output.toString());
+        if (json.isBlank()) {
+            logger.warn("[{}] [yt-dlp-metadata] No JSON metadata for URL: {} (exit code: {}). Output:\n{}",
+                    now(), url, exitCode, output);
+            return new YoutubeVideoMetadata("channel", "video", -1, java.util.List.of());
+        }
+        return parseVideoMetadataJson(json);
+    }
+
+    static YoutubeVideoMetadata parseVideoMetadataJson(String json) {
+        org.json.JSONObject obj = new org.json.JSONObject(json);
+        String channel = firstNonBlank(
+                obj.optString("uploader", null),
+                obj.optString("channel", null),
+                obj.optString("creator", null),
+                "channel"
+        );
+        String title = firstNonBlank(obj.optString("title", null), "video");
+        double duration = obj.optDouble("duration", -1.0);
+        java.util.List<YoutubeChapter> chapters = parseChapters(obj, duration);
+        return new YoutubeVideoMetadata(channel, title, duration, chapters);
+    }
+
+    private static java.util.List<YoutubeChapter> parseChapters(org.json.JSONObject obj, double videoDuration) {
+        org.json.JSONArray jsonChapters = obj.optJSONArray("chapters");
+        if (jsonChapters == null || jsonChapters.isEmpty()) {
+            return java.util.List.of();
+        }
+        java.util.List<YoutubeChapter> chapters = new java.util.ArrayList<>();
+        for (int i = 0; i < jsonChapters.length(); i++) {
+            org.json.JSONObject chapter = jsonChapters.optJSONObject(i);
+            if (chapter == null) {
+                continue;
+            }
+            String title = chapter.optString("title", "").trim();
+            double start = chapter.optDouble("start_time", -1.0);
+            double end = chapter.optDouble("end_time", -1.0);
+            if (end <= start && i + 1 < jsonChapters.length()) {
+                org.json.JSONObject next = jsonChapters.optJSONObject(i + 1);
+                if (next != null) {
+                    end = next.optDouble("start_time", end);
+                }
+            }
+            if (end <= start && videoDuration > start) {
+                end = videoDuration;
+            }
+            try {
+                chapters.add(new YoutubeChapter(title, start, end));
+            } catch (IllegalArgumentException ignored) {
+                logger.debug("[{}] Ignoring invalid chapter: title={} start={} end={}", now(), title, start, end);
+            }
+        }
+        return java.util.List.copyOf(chapters);
+    }
+
+    private static String extractJsonObject(String output) {
+        if (output == null || output.isBlank()) {
+            return "";
+        }
+        for (String line : output.split("\\R")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                return trimmed;
+            }
+        }
+        int start = output.indexOf('{');
+        int end = output.lastIndexOf('}');
+        return start >= 0 && end > start ? output.substring(start, end + 1).trim() : "";
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    public String[] getVideoInfo(String url) throws IOException, InterruptedException {
         if (url == null || url.trim().isEmpty()) {
             return new String[]{"channel", "video"};
         }
