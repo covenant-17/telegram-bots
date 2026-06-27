@@ -265,26 +265,7 @@ public class YtDlpService {
     }
 
     private boolean writeAudioRange(File inputFile, AudioClipRange range, File outputFile, String logPrefix) throws IOException, InterruptedException {
-        double clipDuration = range.durationSeconds();
-        double fadeDuration = Math.min(AudioClipRange.FADE_SECONDS, clipDuration / 2.0);
-        double fadeOutStart = Math.max(0.0, clipDuration - fadeDuration);
-        String audioFilter = String.format(java.util.Locale.US,
-                "afade=t=in:st=0:d=%.3f,afade=t=out:st=%.3f:d=%.3f",
-                fadeDuration, fadeOutStart, fadeDuration);
-
-        java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
-                ffmpegPath,
-                "-y",
-                "-i", inputFile.getAbsolutePath(),
-                "-ss", formatSeconds(range.startSeconds()),
-                "-t", formatSeconds(clipDuration),
-                "-map", "0:a:0",
-                "-vn",
-                "-af", audioFilter,
-                "-c:a", "libmp3lame",
-                "-b:a", "320k",
-                outputFile.getAbsolutePath()
-        ));
+        java.util.List<String> cmd = buildAudioRangeCommand(ffmpegPath, inputFile, range, outputFile);
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
@@ -307,14 +288,31 @@ public class YtDlpService {
         return true;
     }
 
+    static java.util.List<String> buildAudioRangeCommand(String ffmpegPath, File inputFile, AudioClipRange range, File outputFile) {
+        double clipDuration = range.durationSeconds();
+        double fadeDuration = Math.min(AudioClipRange.FADE_SECONDS, clipDuration / 2.0);
+        double fadeOutStart = Math.max(0.0, clipDuration - fadeDuration);
+        String audioFilter = String.format(java.util.Locale.US,
+                "atrim=start=%.3f:end=%.3f,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=%.3f,afade=t=out:st=%.3f:d=%.3f",
+                range.startSeconds(), range.endSeconds(), fadeDuration, fadeOutStart, fadeDuration);
+
+        return new java.util.ArrayList<>(java.util.Arrays.asList(
+                ffmpegPath,
+                "-y",
+                "-i", inputFile.getAbsolutePath(),
+                "-map", "0:a:0",
+                "-vn",
+                "-af", audioFilter,
+                "-c:a", "libmp3lame",
+                "-b:a", "320k",
+                outputFile.getAbsolutePath()
+        ));
+    }
+
     private static String stripMp3Extension(String name) {
         return name != null && name.toLowerCase(java.util.Locale.ROOT).endsWith(".mp3")
                 ? name.substring(0, name.length() - 4)
                 : name;
-    }
-
-    private static String formatSeconds(double seconds) {
-        return String.format(java.util.Locale.US, "%.3f", seconds);
     }
 
     public boolean isDurationWithinLimit(double durationSeconds) {

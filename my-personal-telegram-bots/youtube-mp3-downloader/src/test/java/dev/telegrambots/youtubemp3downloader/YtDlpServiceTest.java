@@ -3,6 +3,7 @@ package dev.telegrambots.youtubemp3downloader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
 import java.io.File;
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class YtDlpServiceTest {
@@ -32,6 +33,25 @@ class YtDlpServiceTest {
         assertTrue(file.exists());
         service.deleteFileIfExists(file);
         assertFalse(file.exists());
+    }
+
+    @Test
+    void buildAudioRangeCommandUsesAbsoluteRangeFilter() {
+        List<String> command = YtDlpService.buildAudioRangeCommand(
+                "ffmpeg",
+                new File("source.mp3"),
+                new AudioClipRange(11.0, 122.0),
+                new File("clip.mp3")
+        );
+
+        assertFalse(command.contains("-ss"));
+        assertFalse(command.contains("-t"));
+        int filterIndex = command.indexOf("-af");
+        assertTrue(filterIndex >= 0);
+        assertEquals(
+                "atrim=start=11.000:end=122.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.500,afade=t=out:st=110.500:d=0.500",
+                command.get(filterIndex + 1)
+        );
     }
 
     @Test
