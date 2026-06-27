@@ -320,7 +320,11 @@ public class CommandHandler {
             String finalFile = baseFileName + ".mp3";
             java.io.File finalAudioFile = new java.io.File(saveDir, finalFile);
 
-            if (!forceDownload && !request.hasClipRange()) {
+            if (!forceDownload) {
+                if (finalAudioFile.exists() && finalAudioFile.length() > 0) {
+                    duplicateIndex.addOrUpdateDownloadedFile(finalFile, finalAudioFile.toPath());
+                }
+
                 java.util.Optional<MusicDuplicateIndex.DuplicateMatch> duplicate = duplicateIndex.findDuplicate(baseFileName);
                 if (duplicate.isPresent()) {
                     sendDuplicateWarning(telegram, chatIdLong, request, index, total, baseFileName, duplicate.get());
@@ -410,6 +414,7 @@ public class CommandHandler {
             if (fallbackUsed) {
                 msg.append("\n\nTitle taken from <title> tag of YouTube page (curl fallback)");
             }
+            duplicateIndex.addOrUpdateDownloadedFile(afterName, finalAudioFile.toPath());
             telegram.sendAudio(chatId, finalAudioFile, msg.toString());
             logger.info("[{}] [SendAudio] Sent audio for URL: {}", now(), url);
             return true;

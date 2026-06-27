@@ -81,6 +81,67 @@ public class MusicDuplicateIndex {
         return Optional.empty();
     }
 
+    public synchronized boolean addOrUpdateDownloadedFile(String displayName, Path filePath) {
+        if (!isEnabled() || displayName == null || displayName.isBlank() || filePath == null) {
+            return false;
+        }
+
+        String key = normalizeForMatch(displayName);
+        if (key.isBlank()) {
+            return false;
+        }
+
+        reloadIfNeeded();
+        Path absolutePath = filePath.toAbsolutePath();
+        Entry entry = new Entry(key, stripExtension(displayName), absolutePath.toString());
+        boolean samePathAlreadyIndexed = entries.stream()
+                .anyMatch(existing -> existing.key().equals(key) && existing.path().equals(entry.path()));
+        if (samePathAlreadyIndexed) {
+            return false;
+        }
+
+        try {
+            Path parent = indexPath.toAbsolutePath().getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            boolean writeHeader = !Files.exists(indexPath) || Files.size(indexPath) == 0;
+            try (BufferedWriter writer = Files.newBufferedWriter(
+                    indexPath,
+                    StandardCharsets.UTF_8,
+                    java.nio.file.StandardOpenOption.CREATE,
+                    java.nio.file.StandardOpenOption.APPEND
+            )) {
+                if (writeHeader) {
+                    writer.write("match_key\tdisplay_name\tpath");
+                    writer.newLine();
+                }
+                writer.write(escapeTsv(entry.key()));
+                writer.write('\t');
+                writer.write(escapeTsv(entry.displayName()));
+                writer.write('\t');
+                writer.write(escapeTsv(entry.path()));
+                writer.newLine();
+            }
+
+            List<Entry> updatedEntries = new ArrayList<>(entries);
+            updatedEntries.add(entry);
+            Map<String, Entry> updatedByKey = new HashMap<>(exactByKey);
+            Map<String, Entry> updatedByTokenKey = new HashMap<>(exactByTokenKey);
+            updatedByKey.putIfAbsent(entry.key(), entry);
+            updatedByTokenKey.putIfAbsent(tokenSortKey(entry.key()), entry);
+            entries = List.copyOf(updatedEntries);
+            exactByKey = Map.copyOf(updatedByKey);
+            exactByTokenKey = Map.copyOf(updatedByTokenKey);
+            lastModifiedMillis = Files.getLastModifiedTime(indexPath).toMillis();
+            logger.info("Added downloaded file to duplicate music index: {} -> {}", entry.displayName(), entry.path());
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to append downloaded file to duplicate music index: {}", indexPath, e);
+            return false;
+        }
+    }
+
     public static void writeIndex(Path musicRoot, Path outputPath) throws IOException {
         List<Entry> scanned = scanMusicRoot(musicRoot);
         Path parent = outputPath.toAbsolutePath().getParent();

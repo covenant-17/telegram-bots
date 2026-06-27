@@ -51,4 +51,21 @@ class MusicDuplicateIndexTest {
         assertFalse(index.isEnabled());
         assertTrue(index.findDuplicate("Artist Song").isEmpty());
     }
+
+    @Test
+    void shouldAppendDownloadedFileToIndexOnce() throws Exception {
+        Path indexPath = tempDir.resolve("music-index.tsv");
+        Path downloadedFile = tempDir.resolve("Sosmula Bangout.mp3");
+        Files.writeString(downloadedFile, "fake");
+        MusicDuplicateIndex index = new MusicDuplicateIndex(indexPath.toString());
+
+        assertTrue(index.addOrUpdateDownloadedFile("Sosmula Bangout.mp3", downloadedFile));
+        assertFalse(index.addOrUpdateDownloadedFile("Sosmula Bangout.mp3", downloadedFile));
+
+        assertTrue(index.findDuplicate("SosMula - BANGOUT (Official Music Video)").isPresent());
+        long indexedRows = Files.readAllLines(indexPath).stream()
+                .filter(line -> line.contains("sosmula bangout"))
+                .count();
+        assertEquals(1, indexedRows);
+    }
 }
