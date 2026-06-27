@@ -76,5 +76,27 @@ class FileNameSanitizerTest {
                 FileNameSanitizer.sanitize("Maya Silver Nocturnal Animals Сinematic Darkwave Noir Post Punk.mp3"));
         assertEquals("Maya Silver Heaven Or Hell",
                 FileNameSanitizer.sanitize("Maya Silver Heaven Or Hell 𝗢𝗕𝗦𝗖𝗨𝗥𝗘 𝗩𝗘𝗥𝗦𝗜𝗢𝗡.mp3"));
+        assertEquals("Amanda Byron Destruction",
+                FileNameSanitizer.sanitize("Amor Fati - Amanda Byron Destruction.mp3"));
+        assertEquals("Jane Ocean Mist Over The River",
+                FileNameSanitizer.sanitize("Jane Ocean Mist Over The River Darkwave.mp3"));
+        assertEquals("Lara Newman Just Another Girl In Her 20s",
+                FileNameSanitizer.sanitize("Lara Newman Just Another Girl In Her 20s Darkwave Post Punk.mp3"));
+        assertEquals("Lena Obscura Aquí Sigo Y Estoy Bien",
+                FileNameSanitizer.sanitize("Lenaobscura - Lena Obscura Aquí Sigo Y Estoy Bien Deep.mp3"));
+        assertEquals("Leonard Cohen Dance Me To The End Of Love Lara Newman",
+                FileNameSanitizer.sanitize("Leonard Cohen Dance Me To The End Of Love Lara Newman Cover Darkwave Post Punk.mp3"));
+        assertEquals("Maya Silver 7 Sins",
+                FileNameSanitizer.sanitize("Maya Silver 7 Sins Cinematic Darkwave Noir Postpunk.mp3"));
+        assertEquals("Mia Dark From My Bones",
+                FileNameSanitizer.sanitize("Mia Dark From My Bones Dark Dream Pop.mp3"));
+        assertEquals("Chernoburkv Циклон",
+                FileNameSanitizer.sanitize("Nedostupnostь Chernoburkv Циклон.mp3"));
+        assertEquals("Nina Gallow Nachtschwimmen",
+                FileNameSanitizer.sanitize("Nina Gallow Nachtschwimmen Industrial Electronic.mp3"));
+        assertEquals("Nina Gallow Supermarkt",
+                FileNameSanitizer.sanitize("Nina Gallow Supermarkt Darkwave Minimal Synth.mp3"));
+        assertEquals("Nina Gallow Tanz",
+                FileNameSanitizer.sanitize("Nina Gallow Tanz Darkwave Postpunk.mp3"));
     }
 }
