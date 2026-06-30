@@ -36,11 +36,9 @@ YOUTUBE_MP3_DOWNLOADER_ERR="$LOG_DIR/youtube-mp3-downloader-error.log"
 MANAGER_BOT_JAR="/data/data/com.termux/files/home/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
 MANAGER_BOT_LOG="$LOG_DIR/manager-bot.log"
 MANAGER_BOT_ERR="$LOG_DIR/manager-bot-error.log"
-# trace-keeper (runs inside proot-distro ubuntu — requires glibc + libssl3)
-TRACE_KEEPER_JAR="/data/data/com.termux/files/home/termuxserver/src/trace-keeper-1.0.0-SNAPSHOT.jar"
 TRACE_KEEPER_LOG="$LOG_DIR/trace-keeper.log"
 TRACE_KEEPER_ERR="$LOG_DIR/trace-keeper-error.log"
-APP_HOME="/data/data/com.termux/files/home"
+TRACE_KEEPER_START="/data/data/com.termux/files/home/termuxserver/src/sh/start-trace-keeper.sh"
 
 # Starting the bots
 echo "Starting converter-bot..." >> "$CONVERTER_LOG"
@@ -55,13 +53,7 @@ nohup bash ~/termuxserver/src/sh/watchdog.sh >> "$WATCHDOG_LOG" 2>&1 &
 
 # trace-keeper (via proot-distro ubuntu for glibc/libssl3 support)
 echo "Starting trace-keeper..." >> "$TRACE_KEEPER_LOG"
-nohup proot-distro login ubuntu -- \
-  env TDLIB_API_ID="$TDLIB_API_ID" TDLIB_API_HASH="$TDLIB_API_HASH" \
-  TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN" \
-  TELEGRAM_NOTIFY_CHAT_ID="$TELEGRAM_NOTIFY_CHAT_ID" \
-  TELEGRAM_ADMIN_USER_ID="$TELEGRAM_ADMIN_USER_ID" \
-  java -Dapp.home="$APP_HOME" -jar "$TRACE_KEEPER_JAR" \
-  >> "$TRACE_KEEPER_LOG" 2>> "$TRACE_KEEPER_ERR" &
+nohup bash "$TRACE_KEEPER_START" >> "$TRACE_KEEPER_LOG" 2>> "$TRACE_KEEPER_ERR" &
 
 # Wait for all background processes to finish
 exit 0

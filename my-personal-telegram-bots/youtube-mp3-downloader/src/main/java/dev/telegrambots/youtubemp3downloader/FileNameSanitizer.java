@@ -37,6 +37,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("^\\s*lenaobscura\\s*-\\s*", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("^\\s*nedostupnost[ьb]?\\s+", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
         rules.put(Pattern.compile("^\\s*rhino\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*surveillance\\s+state\\s+records\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("-{2,}"), " ");
         rules.put(Pattern.compile("-"), " ");
         rules.put(Pattern.compile("([\\[].+[\\]])"), "");

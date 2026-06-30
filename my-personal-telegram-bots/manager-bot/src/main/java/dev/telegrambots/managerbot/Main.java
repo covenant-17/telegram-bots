@@ -10,6 +10,7 @@ public class Main {
             ManagerBot bot = new ManagerBot();
             botsApi.registerBot(bot);
             bot.notifyStartup();
+            bot.startDeadBotCron();
             System.out.println("Manager Bot started.");
         } catch (Exception e) {
             e.printStackTrace();

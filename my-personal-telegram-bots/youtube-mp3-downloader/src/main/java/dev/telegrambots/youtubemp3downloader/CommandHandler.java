@@ -25,6 +25,7 @@ public class CommandHandler {
             config.ytDlpPath, config.ffmpegPath, config.ffprobePath, config.maxFileSize, config.maxDurationMinutes,
             config.cookiesFilePath);
     private static final MusicDuplicateIndex duplicateIndex = new MusicDuplicateIndex(config.duplicateIndexPath);
+    private static final DownloadRequestDuplicateIndex requestDuplicateIndex = new DownloadRequestDuplicateIndex(config.duplicateIndexPath);
     private static final ConcurrentHashMap<String, PendingDownload> pendingDuplicateDownloads = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, PendingChapterDownload> pendingChapterDownloads = new ConcurrentHashMap<>();
     private static final String FORCE_DOWNLOAD_CALLBACK_PREFIX = "dupdl:";
@@ -448,6 +449,7 @@ public class CommandHandler {
                 msg.append("\n\nTitle taken from <title> tag of YouTube page (curl fallback)");
             }
             duplicateIndex.addOrUpdateDownloadedFile(afterName, finalAudioFile.toPath());
+            requestDuplicateIndex.addOrUpdate(request, afterName, finalAudioFile.toPath());
             telegram.sendAudio(chatId, finalAudioFile, msg.toString());
             logger.info("[{}] [SendAudio] Sent audio for URL: {}", now(), url);
             return true;
@@ -476,6 +478,12 @@ public class CommandHandler {
     }
 
     private static boolean processRequestWithPreflight(TelegramService telegram, Long chatId, DownloadRequest request, int index, int total, AtomicInteger duplicateCount) {
+        java.util.Optional<DownloadRequestDuplicateIndex.Entry> requestDuplicate = requestDuplicateIndex.findDuplicate(request);
+        if (requestDuplicate.isPresent()) {
+            duplicateCount.incrementAndGet();
+            sendRequestDuplicateWarning(telegram, chatId, request, index, total, requestDuplicate.get());
+            return true;
+        }
         if (request.hasClipRange()) {
             return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount);
         }
@@ -626,6 +634,7 @@ public class CommandHandler {
                 msg.append("Range: ").append(plan.chapter().clipRange().formatLabel()).append("\n");
                 msg.append("YouTube: ").append(url);
                 duplicateIndex.addOrUpdateDownloadedFile(plan.fileName(), chapterFile.toPath());
+                requestDuplicateIndex.addOrUpdate(request, plan.fileName(), chapterFile.toPath());
                 telegram.sendAudio(chatId, chapterFile, msg.toString());
                 sent++;
             }
@@ -746,6 +755,40 @@ public class CommandHandler {
         }
         message.append("\nMatch: ").append(duplicate.matchType())
                 .append(" ").append(String.format(java.util.Locale.US, "%.0f%%", duplicate.score() * 100));
+        message.append("\n\nUse the button below to download anyway.");
+
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("Download anyway");
+        button.setCallbackData(FORCE_DOWNLOAD_CALLBACK_PREFIX + id);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(java.util.List.of(java.util.List.of(button)));
+        telegram.sendText(chatId, message.toString(), markup);
+    }
+
+    private static void sendRequestDuplicateWarning(
+            TelegramService telegram,
+            Long chatId,
+            DownloadRequest request,
+            int index,
+            int total,
+            DownloadRequestDuplicateIndex.Entry duplicate
+    ) {
+        cleanupExpiredPendingDownloads();
+        String id = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        pendingDuplicateDownloads.put(id, new PendingDownload(chatId, request, index, total, System.currentTimeMillis()));
+
+        StringBuilder message = new StringBuilder();
+        message.append("[DUPLICATE ⚠️] Skipped download: this YouTube request was already processed. (")
+                .append(index).append("/").append(total).append(")\n");
+        message.append("Requested: ").append(request.url());
+        if (request.hasClipRange()) {
+            message.append(" ").append(request.clipRange().formatLabel());
+        }
+        message.append("\nFound: ").append(duplicate.displayName());
+        if (duplicate.path() != null && !duplicate.path().isBlank()) {
+            message.append("\nPath: ").append(duplicate.path());
+        }
         message.append("\n\nUse the button below to download anyway.");
 
         InlineKeyboardButton button = new InlineKeyboardButton();

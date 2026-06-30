@@ -46,12 +46,17 @@ class YtDlpServiceTest {
 
         assertFalse(command.contains("-ss"));
         assertFalse(command.contains("-t"));
+        assertFalse(command.contains("-vn"));
         int filterIndex = command.indexOf("-af");
         assertTrue(filterIndex >= 0);
         assertEquals(
                 "atrim=start=11.000:end=122.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.500,afade=t=out:st=110.500:d=0.500",
                 command.get(filterIndex + 1)
         );
+        assertTrue(command.contains("-map"));
+        assertTrue(command.contains("0:v?"));
+        assertTrue(command.contains("-c:v"));
+        assertTrue(command.contains("copy"));
     }
 
     @Test

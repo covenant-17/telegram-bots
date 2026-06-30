@@ -72,6 +72,8 @@ class FileNameSanitizerTest {
                 FileNameSanitizer.sanitize("Amor Fati Amanda Byron Absolute.mp3"));
         assertEquals("Sisters Of Mercy Lucretia My Reflection",
                 FileNameSanitizer.sanitize("RHINO Sisters of Mercy - Lucretia My Reflection (Official Music Video) [HD].mp3"));
+        assertEquals("Nuxx Done",
+                FileNameSanitizer.sanitize("Surveillance State Records - Nuxx Done.mp3"));
         assertEquals("Maya Silver Nocturnal Animals",
                 FileNameSanitizer.sanitize("Maya Silver Nocturnal Animals Cinematic Darkwave Noir Post Punk.mp3"));
         assertEquals("Maya Silver Nocturnal Animals",
