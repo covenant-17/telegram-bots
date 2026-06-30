@@ -86,6 +86,8 @@ class FileNameSanitizerTest {
                 FileNameSanitizer.sanitize("Jane Ocean Mist Over The River Darkwave.mp3"));
         assertEquals("Lara Newman Just Another Girl In Her 20s",
                 FileNameSanitizer.sanitize("Lara Newman Just Another Girl In Her 20s Darkwave Post Punk.mp3"));
+        assertEquals("Lena Obscura Aquí Sigo",
+                FileNameSanitizer.sanitize("Lenaobscura - Lena Obscura Aquí Sigo.mp3"));
         assertEquals("Lena Obscura Aquí Sigo Y Estoy Bien",
                 FileNameSanitizer.sanitize("Lenaobscura - Lena Obscura Aquí Sigo Y Estoy Bien Deep.mp3"));
         assertEquals("Leonard Cohen Dance Me To The End Of Love Lara Newman",
