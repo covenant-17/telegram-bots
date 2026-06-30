@@ -45,6 +45,34 @@ class MusicDuplicateIndexTest {
     }
 
     @Test
+    void shouldFindPartialTitleDuplicateEvenWhenExistingNameIsLonger() throws Exception {
+        Path indexPath = tempDir.resolve("music-index.tsv");
+        Files.writeString(indexPath, """
+                match_key\tdisplay_name\tpath
+                bybutters sosmula krakk star ft rocket rese prod harzia dook\tBybutters - Sosmula Krakk Star Ft. Rocket Rese Prod. Harzia Dook\tC:\\Music\\Bybutters - Sosmula Krakk Star Ft. Rocket Rese Prod. Harzia Dook.mp3
+                """);
+
+        MusicDuplicateIndex index = new MusicDuplicateIndex(indexPath.toString());
+
+        MusicDuplicateIndex.DuplicateMatch match = index.findDuplicate("Sosmula Krakk Star Ft. Rocket Rese").orElseThrow();
+        assertEquals("partial-token", match.matchType());
+    }
+
+    @Test
+    void shouldFindPartialTitleDuplicateEvenWhenCandidateNameIsLonger() throws Exception {
+        Path indexPath = tempDir.resolve("music-index.tsv");
+        Files.writeString(indexPath, """
+                match_key\tdisplay_name\tpath
+                sosmula krakk star ft rocket rese\tSosmula Krakk Star Ft. Rocket Rese\tC:\\Music\\Sosmula Krakk Star Ft. Rocket Rese.mp3
+                """);
+
+        MusicDuplicateIndex index = new MusicDuplicateIndex(indexPath.toString());
+
+        MusicDuplicateIndex.DuplicateMatch match = index.findDuplicate("Bybutters Sosmula Krakk Star Ft Rocket Rese Prod Harzia Dook").orElseThrow();
+        assertEquals("partial-token", match.matchType());
+    }
+
+    @Test
     void disabledIndexShouldNotMatch() {
         MusicDuplicateIndex index = new MusicDuplicateIndex("");
 

@@ -12,8 +12,12 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manager Bot — controls all other bots running on Termux.
@@ -26,6 +30,8 @@ import java.util.Map;
  *   /restart <app>       — kill + start (without rebuild)
  *   /logs <app> [N]      — last N lines of app log (default 1000)
  *   /clearlogs <app>     — truncate both log files for an app
+ *   /deadcheck           — check dead apps and notify what should be started
+ *   /restart-sshd        — restart Termux OpenSSH daemon
  *   /apps                — list all apps with ready-to-use commands
  *   /help                — list commands
  */
@@ -33,8 +39,15 @@ public class ManagerBot extends TelegramLongPollingBot {
 
     private static final Logger logger = LoggerFactory.getLogger(ManagerBot.class);
     private static final String HOME = "/data/data/com.termux/files/home";
+    private static final long DEAD_CHECK_INITIAL_DELAY_MINUTES = 1;
+    private static final long DEAD_CHECK_INTERVAL_MINUTES = 60;
 
     private final BotConfig config;
+    private final ScheduledExecutorService deadBotCron = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "manager-bot-dead-check-cron");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private static String getBotTokenFromConfig() {
         try {
@@ -53,6 +66,16 @@ public class ManagerBot extends TelegramLongPollingBot {
         for (long userId : config.allowedUserIds) {
             send(userId, "✅ manager-bot is up and running.");
         }
+    }
+
+    public void startDeadBotCron() {
+        deadBotCron.scheduleAtFixedRate(
+                this::notifyDeadBotsSafely,
+                DEAD_CHECK_INITIAL_DELAY_MINUTES,
+                DEAD_CHECK_INTERVAL_MINUTES,
+                TimeUnit.MINUTES);
+        logger.info("Dead bot cron scheduled after {} minute(s), then every {} minute(s).",
+                DEAD_CHECK_INITIAL_DELAY_MINUTES, DEAD_CHECK_INTERVAL_MINUTES);
     }
 
     @Override
@@ -104,6 +127,8 @@ public class ManagerBot extends TelegramLongPollingBot {
                     if (parts.length < 2) { send(chatId, "Usage: /clearlogs <app>"); return; }
                     handleClearLogs(chatId, parts[1].toLowerCase());
                 }
+                case "/deadcheck" -> handleDeadCheck(chatId);
+                case "/restart-sshd", "/restartsshd" -> handleRestartSshd(chatId);
                 case "/apps" -> handleApps(chatId);
                 case "/help" -> handleHelp(chatId);
                 default -> send(chatId, "Unknown command. Use /help.");
@@ -125,6 +150,15 @@ public class ManagerBot extends TelegramLongPollingBot {
             sb.append("• *").append(app.name).append("*: ").append(status).append("\n");
         }
         send(chatId, sb.toString().trim());
+    }
+
+    private void handleDeadCheck(long chatId) {
+        List<AppDefinition> deadApps = findDeadApps();
+        if (deadApps.isEmpty()) {
+            send(chatId, "✅ All managed apps are alive.");
+            return;
+        }
+        send(chatId, buildDeadBotAlert(deadApps));
     }
 
     private void handleRebuild(long chatId, String appName) {
@@ -274,6 +308,27 @@ public class ManagerBot extends TelegramLongPollingBot {
         }
     }
 
+    private void handleRestartSshd(long chatId) {
+        send(chatId, "🔄 Restarting *sshd*…");
+        String command = """
+                if ! command -v sshd >/dev/null 2>&1; then
+                    echo "sshd executable not found"
+                    exit 127
+                fi
+                pkill -x sshd 2>/dev/null || true
+                sleep 1
+                sshd
+                sleep 1
+                pgrep -x sshd
+                """;
+        ShellResult result = ShellRunner.run(command, null);
+        if (result.isSuccess() && !result.stdout.isBlank()) {
+            send(chatId, "✅ *sshd* restarted (pids: " + result.stdout.replace("\n", ", ") + ").");
+        } else {
+            send(chatId, "❌ Failed to restart *sshd*:\n```\n" + truncate(result.combined(), 800) + "\n```");
+        }
+    }
+
     private void handleApps(long chatId) {
         StringBuilder sb = new StringBuilder("📋 *Apps & Ready Commands*\n");
         for (Map.Entry<String, AppDefinition> entry : AppRegistry.all().entrySet()) {
@@ -287,6 +342,8 @@ public class ManagerBot extends TelegramLongPollingBot {
             sb.append("/logs ").append(name).append("\n");
             sb.append("/clearlogs ").append(name).append("\n");
         }
+        sb.append("\n*Health check*\n");
+        sb.append("/deadcheck\n");
         send(chatId, sb.toString().trim());
     }
 
@@ -301,6 +358,8 @@ public class ManagerBot extends TelegramLongPollingBot {
                 /restart <app> — kill + start (no rebuild)
                 /logs <app> [N] — last N log lines (default 1000, sent as .md file)
                 /clearlogs <app> — truncate log files for an app
+                /deadcheck — check dead apps and show start commands
+                /restart-sshd — restart Termux OpenSSH daemon
                 /apps — list all apps with ready commands
                 /help — this message
 
@@ -343,6 +402,48 @@ public class ManagerBot extends TelegramLongPollingBot {
                 + app.jarPath + " >> " + app.logPath + " 2>> " + app.errLogPath + " &";
         ShellRunner.runDetached("bash -c '" + launchCmd + "'", "/dev/null");
         send(chatId, "♻️ *manager-bot* rebuilt. Restarting now… I'll be back in a few seconds.");
+    }
+
+    private void notifyDeadBotsSafely() {
+        try {
+            List<AppDefinition> deadApps = findDeadApps();
+            if (deadApps.isEmpty()) {
+                logger.info("Dead bot cron check OK: all apps are alive.");
+                return;
+            }
+
+            String alert = buildDeadBotAlert(deadApps);
+            for (long userId : config.allowedUserIds) {
+                send(userId, alert);
+            }
+            logger.warn("Dead bot cron found {} dead app(s): {}", deadApps.size(),
+                    deadApps.stream().map(app -> app.name).toList());
+        } catch (Exception e) {
+            logger.error("Dead bot cron failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private List<AppDefinition> findDeadApps() {
+        List<AppDefinition> deadApps = new ArrayList<>();
+        for (AppDefinition app : AppRegistry.all().values()) {
+            if (ShellRunner.findPids(app.processPattern).isEmpty()) {
+                deadApps.add(app);
+            }
+        }
+        return deadApps;
+    }
+
+    private String buildDeadBotAlert(List<AppDefinition> deadApps) {
+        StringBuilder sb = new StringBuilder("⚠️ *Dead bot alert*\n\n");
+        sb.append("These managed apps are down:\n");
+        for (AppDefinition app : deadApps) {
+            sb.append("• *").append(app.name).append("*: 💀 dead\n");
+        }
+        sb.append("\nStart commands:\n");
+        for (AppDefinition app : deadApps) {
+            sb.append("/start ").append(app.name).append("\n");
+        }
+        return sb.toString().trim();
     }
 
     /**

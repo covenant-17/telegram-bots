@@ -232,6 +232,8 @@ public class YtDlpService {
             return false;
         }
 
+        preserveEmbeddedCoverArt(sourceFile, tempOutput, "[ffmpeg-split]");
+
         Files.move(tempOutput.toPath(), outputFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         logger.info("[{}] [ffmpeg-split] Split file saved to: {} | Range: {}",
                 now(), outputFile.getAbsolutePath(), range.formatLabel());
@@ -253,6 +255,8 @@ public class YtDlpService {
             trimmedFile.delete();
             return false;
         }
+
+        preserveEmbeddedCoverArt(audioFile, trimmedFile, "[ffmpeg-trim]");
 
         java.nio.file.Files.move(
                 trimmedFile.toPath(),
@@ -301,12 +305,103 @@ public class YtDlpService {
                 "-y",
                 "-i", inputFile.getAbsolutePath(),
                 "-map", "0:a:0",
-                "-vn",
+                "-map", "0:v?",
                 "-af", audioFilter,
                 "-c:a", "libmp3lame",
                 "-b:a", "320k",
+                "-c:v", "copy",
+                "-id3v2_version", "3",
+                "-metadata:s:v", "title=Album cover",
+                "-metadata:s:v", "comment=Cover (front)",
+                "-disposition:v", "attached_pic",
                 outputFile.getAbsolutePath()
         ));
+    }
+
+    private void preserveEmbeddedCoverArt(File sourceFile, File audioFile, String logPrefix) throws IOException, InterruptedException {
+        File coverFile = extractEmbeddedCoverArt(sourceFile, logPrefix);
+        if (coverFile == null) {
+            return;
+        }
+
+        File parent = audioFile.getParentFile();
+        File coveredOutput = new File(
+                parent != null ? parent : new File("."),
+                stripMp3Extension(audioFile.getName()) + "_covered_" + System.currentTimeMillis() + ".mp3"
+        );
+
+        ProcessBuilder pb = new ProcessBuilder(
+                ffmpegPath,
+                "-y",
+                "-i", audioFile.getAbsolutePath(),
+                "-i", coverFile.getAbsolutePath(),
+                "-map", "0:a",
+                "-map", "1:v",
+                "-c:a", "copy",
+                "-c:v", "mjpeg",
+                "-id3v2_version", "3",
+                "-metadata:s:v", "title=Album cover",
+                "-metadata:s:v", "comment=Cover (front)",
+                "-disposition:v", "attached_pic",
+                coveredOutput.getAbsolutePath()
+        );
+        pb.redirectErrorStream(true);
+        logger.info("[{}] {} Cover command: {}", now(), logPrefix, String.join(" ", pb.command()));
+        Process process = pb.start();
+        StringBuilder output = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                logger.info("[{}] {} {}", now(), logPrefix, line);
+                output.append(line).append("\n");
+            }
+        }
+        int exitCode = process.waitFor();
+        if (exitCode == 0 && coveredOutput.exists() && coveredOutput.length() > 0) {
+            Files.move(coveredOutput.toPath(), audioFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            logger.info("[{}] {} Preserved cover art for {}", now(), logPrefix, audioFile.getAbsolutePath());
+        } else {
+            logger.warn("[{}] {} Could not reattach cover art for {}. Exit code: {}. Output:\n{}",
+                    now(), logPrefix, audioFile.getAbsolutePath(), exitCode, output);
+            coveredOutput.delete();
+        }
+        coverFile.delete();
+    }
+
+    private File extractEmbeddedCoverArt(File sourceFile, String logPrefix) throws IOException, InterruptedException {
+        File parent = sourceFile.getParentFile();
+        File coverFile = new File(
+                parent != null ? parent : new File("."),
+                stripMp3Extension(sourceFile.getName()) + "_cover_" + System.currentTimeMillis() + ".jpg"
+        );
+
+        ProcessBuilder pb = new ProcessBuilder(
+                ffmpegPath,
+                "-y",
+                "-i", sourceFile.getAbsolutePath(),
+                "-map", "0:v:0",
+                "-frames:v", "1",
+                "-c:v", "mjpeg",
+                coverFile.getAbsolutePath()
+        );
+        pb.redirectErrorStream(true);
+        logger.debug("[{}] {} Extract cover command: {}", now(), logPrefix, String.join(" ", pb.command()));
+        Process process = pb.start();
+        StringBuilder output = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+        }
+        int exitCode = process.waitFor();
+        if (exitCode == 0 && coverFile.exists() && coverFile.length() > 0) {
+            return coverFile;
+        }
+        coverFile.delete();
+        logger.debug("[{}] {} No embedded cover art found in {}. Exit code: {}. Output:\n{}",
+                now(), logPrefix, sourceFile.getAbsolutePath(), exitCode, output);
+        return null;
     }
 
     private static String stripMp3Extension(String name) {

@@ -65,6 +65,11 @@ public class MusicDuplicateIndex {
             return Optional.of(new DuplicateMatch(tokenExact.displayName(), tokenExact.path(), 1.0, "token-exact"));
         }
 
+        Entry partialTokenMatch = findPartialTokenMatch(key);
+        if (partialTokenMatch != null) {
+            return Optional.of(new DuplicateMatch(partialTokenMatch.displayName(), partialTokenMatch.path(), 1.0, "partial-token"));
+        }
+
         Entry bestEntry = null;
         double bestScore = 0.0;
         for (Entry entry : entries) {
@@ -79,6 +84,34 @@ public class MusicDuplicateIndex {
             return Optional.of(new DuplicateMatch(bestEntry.displayName(), bestEntry.path(), bestScore, "fuzzy"));
         }
         return Optional.empty();
+    }
+
+    private Entry findPartialTokenMatch(String candidateKey) {
+        Set<String> candidateTokens = tokenSet(candidateKey);
+        if (candidateTokens.size() < 4) {
+            return null;
+        }
+        Entry bestEntry = null;
+        double bestScore = 0.0;
+        for (Entry entry : entries) {
+            Set<String> entryTokens = tokenSet(entry.key());
+            if (entryTokens.size() < 4) {
+                continue;
+            }
+            int overlap = 0;
+            for (String token : candidateTokens) {
+                if (entryTokens.contains(token)) {
+                    overlap++;
+                }
+            }
+            int smallerSize = Math.min(candidateTokens.size(), entryTokens.size());
+            double score = overlap / (double) smallerSize;
+            if (overlap >= 4 && score >= 0.8 && score > bestScore) {
+                bestScore = score;
+                bestEntry = entry;
+            }
+        }
+        return bestEntry;
     }
 
     public synchronized boolean addOrUpdateDownloadedFile(String displayName, Path filePath) {
@@ -283,6 +316,16 @@ public class MusicDuplicateIndex {
                 .sorted()
                 .reduce((left, right) -> left + " " + right)
                 .orElse("");
+    }
+
+    private static Set<String> tokenSet(String key) {
+        Set<String> tokens = new HashSet<>();
+        for (String token : key.split("\\s+")) {
+            if (!token.isBlank()) {
+                tokens.add(token);
+            }
+        }
+        return tokens;
     }
 
     private static String compact(String key) {
