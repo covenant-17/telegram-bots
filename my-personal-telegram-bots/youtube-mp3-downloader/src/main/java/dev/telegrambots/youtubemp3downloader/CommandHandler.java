@@ -29,6 +29,7 @@ public class CommandHandler {
     private static final DownloadRequestDuplicateIndex requestDuplicateIndex = new DownloadRequestDuplicateIndex(config.duplicateIndexPath);
     private static final ConcurrentHashMap<String, PendingDownload> pendingDuplicateDownloads = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, PendingChapterDownload> pendingChapterDownloads = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Object> downloadFileLocks = new ConcurrentHashMap<>();
     private static final String FORCE_DOWNLOAD_CALLBACK_PREFIX = "dupdl:";
     private static final String CHAPTER_DOWNLOAD_CALLBACK_PREFIX = "chapdl:";
     private static final long PENDING_DOWNLOAD_TTL_MILLIS = 24L * 60L * 60L * 1000L;
@@ -373,6 +374,8 @@ public class CommandHandler {
             if (!saveDir.exists()) saveDir.mkdirs();
             String finalFile = baseFileName + ".mp3";
             java.io.File finalAudioFile = new java.io.File(saveDir, finalFile);
+            Object downloadFileLock = downloadFileLocks.computeIfAbsent(finalFile.toLowerCase(Locale.ROOT), ignored -> new Object());
+            synchronized (downloadFileLock) {
 
             if (!forceDownload) {
                 if (finalAudioFile.exists() && finalAudioFile.length() > 0) {
@@ -474,6 +477,7 @@ public class CommandHandler {
             telegram.sendAudio(chatId, finalAudioFile, msg.toString());
             logger.info("[{}] [SendAudio] Sent audio for URL: {}", now(), url);
             return true;
+            }
         } catch (IOException e) {
             logger.error("[{}] IOException occurred: {} | URL: {} ({} / {})", now(), e.getMessage(), url, index, total, e);
             String errMsg = "[ERROR ☢️☣️] File or disk access error: (" + index + "/" + total + ")\nURL: " + url + " 💾";
