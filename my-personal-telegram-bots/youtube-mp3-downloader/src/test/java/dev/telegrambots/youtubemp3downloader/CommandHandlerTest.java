@@ -122,4 +122,21 @@ class CommandHandlerTest {
         assertTrue(caption.contains("[SUCCESS ✅] Audio ready!"));
         assertTrue(caption.contains("Song renamed"));
     }
+
+    @Test
+    @DisplayName("Should reject URL-like metadata names")
+    void testRejectsUrlLikeMetadataNames() {
+        assertTrue(CommandHandler.isUnsafeMetadataName("https://www.youtube.com/watch?v=4DVdqY5KwXw"));
+        assertTrue(CommandHandler.isUnsafeMetadataName("Https:"));
+        assertTrue(CommandHandler.isUnsafeMetadataName("www.youtube.com watch v 4DVdqY5KwXw"));
+        assertFalse(CommandHandler.isUnsafeMetadataName("Билборды Стертые Слова"));
+    }
+
+    @Test
+    @DisplayName("Should build stable fallback file name from YouTube id")
+    void testFallbackBaseFileNameUsesVideoId() {
+        assertEquals("video-4DVdqY5KwXw",
+                CommandHandler.fallbackBaseFileName("https://www.youtube.com/watch?v=4DVdqY5KwXw"));
+        assertEquals("video", CommandHandler.fallbackBaseFileName("not-a-youtube-url"));
+    }
 }
