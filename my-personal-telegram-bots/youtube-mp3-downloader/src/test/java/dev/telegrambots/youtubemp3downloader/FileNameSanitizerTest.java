@@ -49,6 +49,7 @@ class FileNameSanitizerTest {
     @Test
     void testSanitizeRemovesUnderscores() {
         assertEquals("Крыли Самозанятый L", FileNameSanitizer.sanitize("Крыли_Самозанятый_L_Премьера_Песни_2025.mp3"));
+        assertEquals("Билборды Стертые Слова", FileNameSanitizer.sanitize("билборды - стёртые слова.mp3"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test__Name"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test___Name"));
         assertEquals("Test Name", FileNameSanitizer.sanitize("Test_Name"));
@@ -74,6 +75,12 @@ class FileNameSanitizerTest {
                 FileNameSanitizer.sanitize("RHINO Sisters of Mercy - Lucretia My Reflection (Official Music Video) [HD].mp3"));
         assertEquals("Nuxx Done",
                 FileNameSanitizer.sanitize("Surveillance State Records - Nuxx Done.mp3"));
+        assertEquals("Nuxx Bad",
+                FileNameSanitizer.sanitize("Surveillance State Records - Nuxx Bad.mp3"));
+        assertEquals("Nuxx Bird Brain",
+                FileNameSanitizer.sanitize("Surveillance State Records - Nuxx Bird Brain Jeff In Leather Remix.mp3"));
+        assertEquals("Nuxx Bird Brain",
+                FileNameSanitizer.sanitize("Nuxx Bird Brain.mp3"));
         assertEquals("Maya Silver Nocturnal Animals",
                 FileNameSanitizer.sanitize("Maya Silver Nocturnal Animals Cinematic Darkwave Noir Post Punk.mp3"));
         assertEquals("Maya Silver Nocturnal Animals",
