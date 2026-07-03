@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.UUID;
 
 public class CommandHandler {
@@ -48,6 +49,23 @@ public class CommandHandler {
             args.add(config.cookiesFilePath);
         }
         return args;
+    }
+
+    static boolean isUnsafeMetadataName(String value) {
+        if (value == null || value.isBlank()) {
+            return true;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains("http://")
+                || normalized.contains("https://")
+                || normalized.contains("youtube.com")
+                || normalized.contains("youtu.be")
+                || value.matches(".*[=\\/\\:*?\"<>|].*");
+    }
+
+    static String fallbackBaseFileName(String url) {
+        String videoId = Utils.extractVideoId(url);
+        return videoId == null || videoId.isBlank() ? "video" : "video-" + videoId;
     }
 
     /**
@@ -323,22 +341,25 @@ public class CommandHandler {
             boolean fallbackUsed = false;
             String ytTitleRaw = null;
             String ytAuthorRaw = null;
-            if (sanitizedChannel == null || sanitizedChannel.isBlank() || sanitizedChannel.matches(".*[=\\/\\:*?\"<>|].*") || sanitizedChannel.contains("http")
-                || sanitizedTitle == null || sanitizedTitle.isBlank() || sanitizedTitle.matches(".*[=\\/\\:*?\"<>|].*") || sanitizedTitle.contains("http")) {
+            if (isUnsafeMetadataName(sanitizedChannel) || isUnsafeMetadataName(sanitizedTitle)) {
                 String[] curlInfo = extractTitleAuthorFromCurl(url);
                 ytTitleRaw = curlInfo[0];
                 ytAuthorRaw = curlInfo[1];
                 if (ytTitleRaw != null && !ytTitleRaw.isBlank()) {
-                    sanitizedTitle = FileNameSanitizer.sanitize(ytTitleRaw);
-                    if (ytAuthorRaw != null && !ytAuthorRaw.isBlank()) {
-                        sanitizedChannel = FileNameSanitizer.sanitize(ytAuthorRaw);
+                    String fallbackTitle = FileNameSanitizer.sanitize(ytTitleRaw);
+                    String fallbackChannel = FileNameSanitizer.sanitize(ytAuthorRaw);
+                    if (!isUnsafeMetadataName(fallbackTitle)) {
+                        sanitizedTitle = fallbackTitle;
+                        sanitizedChannel = isUnsafeMetadataName(fallbackChannel) ? null : fallbackChannel;
+                        fallbackUsed = true;
+                        logger.info("[{}] [yt-dlp-info] Fallback title/author from curl: {} / {}", now(), ytTitleRaw, ytAuthorRaw);
                     } else {
+                        sanitizedTitle = fallbackBaseFileName(url);
                         sanitizedChannel = null;
+                        logger.warn("[{}] [yt-dlp-info] Ignoring unsafe fallback title from curl: {} | URL: {}", now(), ytTitleRaw, url);
                     }
-                    fallbackUsed = true;
-                    logger.info("[{}] [yt-dlp-info] Fallback title/author from curl: {} / {}", now(), ytTitleRaw, ytAuthorRaw);
                 } else {
-                    sanitizedTitle = "video";
+                    sanitizedTitle = fallbackBaseFileName(url);
                     sanitizedChannel = null;
                 }
             }
