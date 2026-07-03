@@ -69,6 +69,22 @@ public class CommandHandler {
         return videoId == null || videoId.isBlank() ? "video" : "video-" + videoId;
     }
 
+    static String metadataFallbackWarningLine(String url, String fileName) {
+        return "- " + url + " -> " + fileName;
+    }
+
+    private static void sendMetadataFallbackWarningIfAny(TelegramService telegram, Long chatId, java.util.List<String> details) {
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+        StringBuilder warning = new StringBuilder();
+        warning.append("[WARNING ⚠️] Downloaded, but normal title metadata was unavailable:\n");
+        synchronized (details) {
+            for (String detail : details) warning.append(detail).append("\n");
+        }
+        telegram.sendText(chatId, warning.toString());
+    }
+
     /**
      * Handles incoming Telegram updates. Detects YouTube links in the message, processes single or multiple links,
      * sends progress updates, and triggers audio download and conversion.
@@ -100,6 +116,7 @@ public class CommandHandler {
                     int[] error = {0};
                     AtomicInteger duplicateCount = new AtomicInteger(0);
                     java.util.List<String> errorDetails = new java.util.ArrayList<>();
+                    java.util.List<String> metadataFallbackDetails = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
                     java.util.concurrent.ExecutorService batchExec = java.util.concurrent.Executors.newFixedThreadPool(config.maxParallelDownloads);
                     java.util.List<java.util.concurrent.Callable<Void>> tasks = new java.util.ArrayList<>();
                     for (int i = 0; i < requests.size(); i++) {
@@ -107,7 +124,7 @@ public class CommandHandler {
                         final DownloadRequest request = requests.get(i);
                         tasks.add(() -> {
                             try {
-                                boolean result = processRequestWithPreflight(telegram, message.getChatId(), request, idx + 1, total, duplicateCount);
+                                boolean result = processRequestWithPreflight(telegram, message.getChatId(), request, idx + 1, total, duplicateCount, metadataFallbackDetails);
                                 if (result) {
                                     synchronized (done) { done[0]++; }
                                 } else {
@@ -143,13 +160,23 @@ public class CommandHandler {
                         summary.append("\nFailed URLs:\n");
                         for (String err : errorDetails) summary.append(err).append("\n");
                     }
+                    if (!metadataFallbackDetails.isEmpty()) {
+                        summary.append("\n[WARNING ⚠️] Downloaded, but normal title metadata was unavailable:\n");
+                        synchronized (metadataFallbackDetails) {
+                            for (String detail : metadataFallbackDetails) summary.append(detail).append("\n");
+                        }
+                    }
                     telegram.sendText(message.getChatId(), summary.toString());
                 }).start();
                 return true;
             } else if (requests.size() == 1) {
                 telegram.sendText(message.getChatId(), "[SUCCESS ✅] Link accepted! 🎬 Starting processing...");
                 telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
-                executor.submit(() -> processRequestWithPreflight(telegram, message.getChatId(), requests.get(0), 1, 1, new AtomicInteger(0)));
+                executor.submit(() -> {
+                    java.util.List<String> metadataFallbackDetails = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+                    processRequestWithPreflight(telegram, message.getChatId(), requests.get(0), 1, 1, new AtomicInteger(0), metadataFallbackDetails);
+                    sendMetadataFallbackWarningIfAny(telegram, message.getChatId(), metadataFallbackDetails);
+                });
                 return true;
             } else {
                 telegram.sendText(message.getChatId(), "[ERROR ☢️☣️] Please send a valid YouTube video link. 🚫");
@@ -185,7 +212,8 @@ public class CommandHandler {
                 pending.index(),
                 pending.total(),
                 true,
-                new AtomicInteger(0)
+                new AtomicInteger(0),
+                null
         ));
         return true;
     }
@@ -256,7 +284,7 @@ public class CommandHandler {
      * @param total    The total number of URLs in the batch
      * @return true if the download was successful, false otherwise
      */
-    private static boolean processDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total, boolean forceDownload, AtomicInteger duplicateCount) {
+    private static boolean processDownloadWithStatus(TelegramService telegram, Long chatIdLong, DownloadRequest request, int index, int total, boolean forceDownload, AtomicInteger duplicateCount, java.util.List<String> metadataFallbackDetails) {
         String url = request.url();
         String chatId = chatIdLong.toString();
         final boolean[] sending = {true};
@@ -340,6 +368,7 @@ public class CommandHandler {
 
             // 2. Check if fallback via curl is needed
             boolean fallbackUsed = false;
+            boolean unsafeMetadataFallbackUsed = false;
             String ytTitleRaw = null;
             String ytAuthorRaw = null;
             if (isUnsafeMetadataName(sanitizedChannel) || isUnsafeMetadataName(sanitizedTitle)) {
@@ -357,11 +386,13 @@ public class CommandHandler {
                     } else {
                         sanitizedTitle = fallbackBaseFileName(url);
                         sanitizedChannel = null;
+                        unsafeMetadataFallbackUsed = true;
                         logger.warn("[{}] [yt-dlp-info] Ignoring unsafe fallback title from curl: {} | URL: {}", now(), ytTitleRaw, url);
                     }
                 } else {
                     sanitizedTitle = fallbackBaseFileName(url);
                     sanitizedChannel = null;
+                    unsafeMetadataFallbackUsed = true;
                 }
             }
 
@@ -472,9 +503,15 @@ public class CommandHandler {
             if (fallbackUsed) {
                 msg.append("\n\nTitle taken from <title> tag of YouTube page (curl fallback)");
             }
+            if (unsafeMetadataFallbackUsed) {
+                msg.append("\n\n[WARNING ⚠️] Normal title metadata was unavailable; saved with fallback name.");
+            }
             duplicateIndex.addOrUpdateDownloadedFile(afterName, finalAudioFile.toPath());
             requestDuplicateIndex.addOrUpdate(request, afterName, finalAudioFile.toPath());
             telegram.sendAudio(chatId, finalAudioFile, msg.toString());
+            if (unsafeMetadataFallbackUsed && metadataFallbackDetails != null) {
+                metadataFallbackDetails.add(metadataFallbackWarningLine(url, afterName));
+            }
             logger.info("[{}] [SendAudio] Sent audio for URL: {}", now(), url);
             return true;
             }
@@ -502,7 +539,7 @@ public class CommandHandler {
         return false;
     }
 
-    private static boolean processRequestWithPreflight(TelegramService telegram, Long chatId, DownloadRequest request, int index, int total, AtomicInteger duplicateCount) {
+    private static boolean processRequestWithPreflight(TelegramService telegram, Long chatId, DownloadRequest request, int index, int total, AtomicInteger duplicateCount, java.util.List<String> metadataFallbackDetails) {
         java.util.Optional<DownloadRequestDuplicateIndex.Entry> requestDuplicate = requestDuplicateIndex.findDuplicate(request);
         if (requestDuplicate.isPresent()) {
             duplicateCount.incrementAndGet();
@@ -510,7 +547,7 @@ public class CommandHandler {
             return true;
         }
         if (request.hasClipRange()) {
-            return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount);
+            return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount, metadataFallbackDetails);
         }
         try {
             YoutubeVideoMetadata metadata = ytDlpService.getVideoMetadata(request.url());
@@ -522,7 +559,7 @@ public class CommandHandler {
             logger.warn("[{}] Failed to inspect chapters for URL: {}. Falling back to regular flow.",
                     now(), request.url(), e);
         }
-        return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount);
+        return processDownloadWithStatus(telegram, chatId, request, index, total, false, duplicateCount, metadataFallbackDetails);
     }
 
     private static void sendChapterApproval(

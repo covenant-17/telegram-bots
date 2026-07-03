@@ -139,4 +139,13 @@ class CommandHandlerTest {
                 CommandHandler.fallbackBaseFileName("https://www.youtube.com/watch?v=4DVdqY5KwXw"));
         assertEquals("video", CommandHandler.fallbackBaseFileName("not-a-youtube-url"));
     }
+
+    @Test
+    @DisplayName("Should format metadata fallback warning line")
+    void testMetadataFallbackWarningLine() {
+        assertEquals("- https://www.youtube.com/watch?v=4DVdqY5KwXw -> video-4DVdqY5KwXw.mp3",
+                CommandHandler.metadataFallbackWarningLine(
+                        "https://www.youtube.com/watch?v=4DVdqY5KwXw",
+                        "video-4DVdqY5KwXw.mp3"));
+    }
 }
