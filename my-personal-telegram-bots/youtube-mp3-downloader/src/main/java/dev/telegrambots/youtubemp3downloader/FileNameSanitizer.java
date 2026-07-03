@@ -72,6 +72,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("\\bdeep\\b(?=\\s*(?:\\.mp3|mp3)?$)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\bobscure\\s+version\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\boriginal\\s+mix\\b", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("\\bjeff\\s+in\\s+leather\\s+remix\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\(", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile(","), "");
@@ -95,7 +96,7 @@ public class FileNameSanitizer {
     public static String sanitize(String fileName) {
         if (fileName == null)
             return null;
-        String result = Normalizer.normalize(fileName, Normalizer.Form.NFKC).trim().toLowerCase();
+        String result = Normalizer.normalize(fileName, Normalizer.Form.NFKC).trim().toLowerCase().replace('ё', 'е');
         for (Map.Entry<Pattern, String> entry : rules.entrySet()) {
             result = entry.getKey().matcher(result).replaceAll(entry.getValue());
         }
