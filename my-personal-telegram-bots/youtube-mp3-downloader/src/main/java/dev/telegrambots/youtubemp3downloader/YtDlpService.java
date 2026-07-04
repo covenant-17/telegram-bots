@@ -42,31 +42,23 @@ public class YtDlpService {
     private static String now() {
         return java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }    public boolean downloadAudio(String url, String outputPath) throws IOException, InterruptedException {
+        return downloadAudio(url, outputPath, true);
+    }
+
+    public boolean downloadAudio(String url, String outputPath, boolean enforceMaxFileSize) throws IOException, InterruptedException {
         if (url == null || url.trim().isEmpty() || outputPath == null || outputPath.trim().isEmpty()) {
             return false;
         }
         
         String ffmpegDir = new File(ffmpegPath).getParent();
-        java.util.List<String> cmd = new java.util.ArrayList<>();
-        cmd.add(ytDlpPath);
-        if (ffmpegDir != null) {
-            cmd.add("--ffmpeg-location");
-            cmd.add(ffmpegDir);
-        }
-        cmd.addAll(java.util.Arrays.asList(
-            "--force-overwrites",
-            "-f", "bestaudio[ext=webm]/bestaudio/best",
-            "--extract-audio",
-            "--audio-format", "mp3",
-            "--audio-quality", "320K",
-            "--postprocessor-args", "-b:a 320k",
-            "--max-filesize", maxFileSize + "",
-            "--no-playlist",
-            "--max-downloads", "1",
-            "--output", outputPath
-        ));
-        cmd.addAll(commonYtDlpArgs());
-        cmd.add(url);
+        java.util.List<String> cmd = buildDownloadAudioCommand(
+                ytDlpPath,
+                ffmpegDir,
+                outputPath,
+                url,
+                enforceMaxFileSize ? maxFileSize : null,
+                commonYtDlpArgs()
+        );
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
         logger.info("[{}] [yt-dlp] Command: {}", now(), String.join(" ", pb.command()));
@@ -95,7 +87,49 @@ public class YtDlpService {
         }
         
         return exitCode == 0 || exitCode == 101;
-    }    public boolean downloadAudioWithThumbnail(String url, String outputPath) throws IOException, InterruptedException {
+    }
+
+    static java.util.List<String> buildDownloadAudioCommand(
+            String ytDlpPath,
+            String ffmpegDir,
+            String outputPath,
+            String url,
+            Long maxFileSize,
+            java.util.List<String> commonArgs
+    ) {
+        java.util.List<String> cmd = new java.util.ArrayList<>();
+        cmd.add(ytDlpPath);
+        if (ffmpegDir != null) {
+            cmd.add("--ffmpeg-location");
+            cmd.add(ffmpegDir);
+        }
+        cmd.addAll(java.util.Arrays.asList(
+                "--force-overwrites",
+                "-f", "bestaudio[ext=webm]/bestaudio/best",
+                "--extract-audio",
+                "--audio-format", "mp3",
+                "--audio-quality", "320K",
+                "--postprocessor-args", "-b:a 320k"
+        ));
+        if (maxFileSize != null) {
+            cmd.add("--max-filesize");
+            cmd.add(maxFileSize.toString());
+        }
+        cmd.addAll(java.util.Arrays.asList(
+                "--no-playlist",
+                "--max-downloads", "1",
+                "--output", outputPath
+        ));
+        cmd.addAll(commonArgs);
+        cmd.add(url);
+        return cmd;
+    }
+
+    public boolean downloadAudioWithThumbnail(String url, String outputPath) throws IOException, InterruptedException {
+        return downloadAudioWithThumbnail(url, outputPath, true);
+    }
+
+    public boolean downloadAudioWithThumbnail(String url, String outputPath, boolean enforceMaxFileSize) throws IOException, InterruptedException {
         if (url == null || url.trim().isEmpty() || outputPath == null || outputPath.trim().isEmpty()) {
             return false;
         }
@@ -109,7 +143,7 @@ public class YtDlpService {
         File tempFile = new File(tempDir, tempFileName);
 
         // Download audio to temporary file
-        boolean audioOk = downloadAudio(url, tempFile.getAbsolutePath());
+        boolean audioOk = downloadAudio(url, tempFile.getAbsolutePath(), enforceMaxFileSize);
         if (!audioOk) return false;
 
         // Download thumbnail via HTTP (faster than yt-dlp --skip-download)

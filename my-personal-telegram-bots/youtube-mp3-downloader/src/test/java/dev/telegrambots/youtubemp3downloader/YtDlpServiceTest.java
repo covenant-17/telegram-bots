@@ -60,6 +60,38 @@ class YtDlpServiceTest {
     }
 
     @Test
+    void buildDownloadAudioCommandIncludesMaxFilesizeForNormalDownloads() {
+        List<String> command = YtDlpService.buildDownloadAudioCommand(
+                "yt-dlp",
+                null,
+                "out.mp3",
+                "https://youtu.be/test",
+                maxFileSize,
+                List.of()
+        );
+
+        int maxFilesizeIndex = command.indexOf("--max-filesize");
+        assertTrue(maxFilesizeIndex >= 0);
+        assertEquals(String.valueOf(maxFileSize), command.get(maxFilesizeIndex + 1));
+    }
+
+    @Test
+    void buildDownloadAudioCommandCanSkipMaxFilesizeForChapterSourceDownloads() {
+        List<String> command = YtDlpService.buildDownloadAudioCommand(
+                "yt-dlp",
+                null,
+                "chapters_source.mp3",
+                "https://youtu.be/test",
+                null,
+                List.of("--cookies", "cookies.txt")
+        );
+
+        assertFalse(command.contains("--max-filesize"));
+        assertTrue(command.contains("--cookies"));
+        assertTrue(command.contains("cookies.txt"));
+    }
+
+    @Test
     void testGetVideoInfoInvalidUrl() {
         // Skip test if yt-dlp not found in PATH
         boolean ytDlpExists = isExecutableOnPath(ytDlpPath);
