@@ -659,7 +659,7 @@ public class CommandHandler {
             }
 
             fullAudioFile = new java.io.File(tempDir, "chapters_source_" + System.currentTimeMillis() + ".mp3");
-            boolean audioOk = ytDlpService.downloadAudioWithThumbnail(url, fullAudioFile.getAbsolutePath());
+            boolean audioOk = ytDlpService.downloadAudioWithThumbnail(url, fullAudioFile.getAbsolutePath(), false);
             if (!audioOk || !fullAudioFile.exists() || fullAudioFile.length() == 0) {
                 telegram.sendText(chatIdLong, "[ERROR ☢️☣️] Error downloading source audio for chapter split. (" + index + "/" + total + ")\nURL: " + url + " ❌");
                 return false;
