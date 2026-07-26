@@ -283,7 +283,7 @@ public class CommandHandler {
             String tempBaseName = cutBaseName(attachment.fileName());
             String outputFileName = cutOutputFileName(attachment.fileName());
             sourceFile = new java.io.File(jobDir, tempBaseName + "_upload" + sourceExtension(attachment.fileName()));
-            outputFile = new java.io.File(jobDir, outputFileName);
+            outputFile = new java.io.File(saveDir, outputFileName);
 
             telegram.downloadFile(attachment.fileId(), sourceFile);
             if (!sourceFile.exists() || sourceFile.length() == 0) {
@@ -291,37 +291,45 @@ public class CommandHandler {
                 return;
             }
 
-            boolean cutOk = ytDlpService.splitAudioRange(sourceFile, range, outputFile);
-            if (!cutOk || !outputFile.exists() || outputFile.length() == 0) {
-                telegram.sendText(chatId, "[ERROR ☢️☣️] Error trimming audio range " + range.formatLabel() + ". ✂️");
-                return;
-            }
-            if (attachment.thumbnailFileId() != null && !attachment.thumbnailFileId().isBlank()) {
-                thumbnailFile = new java.io.File(jobDir, tempBaseName + "_thumbnail.jpg");
-                telegram.downloadFile(attachment.thumbnailFileId(), thumbnailFile);
-                if (thumbnailFile.exists() && thumbnailFile.length() > 0) {
-                    boolean coverOk = ytDlpService.attachCoverArt(outputFile, thumbnailFile);
-                    if (!coverOk) {
-                        logger.warn("[{}] Could not attach Telegram thumbnail for cut upload: {}", now(), attachment.fileName());
+            Object outputFileLock = downloadFileLocks.computeIfAbsent(outputFileName.toLowerCase(Locale.ROOT), ignored -> new Object());
+            synchronized (outputFileLock) {
+                ytDlpService.deleteFileIfExists(outputFile);
+                boolean cutOk = ytDlpService.splitAudioRange(sourceFile, range, outputFile);
+                if (!cutOk || !outputFile.exists() || outputFile.length() == 0) {
+                    telegram.sendText(chatId, "[ERROR ☢️☣️] Error trimming audio range " + range.formatLabel() + ". ✂️");
+                    return;
+                }
+                if (attachment.thumbnailFileId() != null && !attachment.thumbnailFileId().isBlank()) {
+                    thumbnailFile = new java.io.File(jobDir, tempBaseName + "_thumbnail.jpg");
+                    telegram.downloadFile(attachment.thumbnailFileId(), thumbnailFile);
+                    if (thumbnailFile.exists() && thumbnailFile.length() > 0) {
+                        boolean coverOk = ytDlpService.attachCoverArt(outputFile, thumbnailFile);
+                        if (!coverOk) {
+                            logger.warn("[{}] Could not attach Telegram thumbnail for cut upload: {}", now(), attachment.fileName());
+                        }
                     }
                 }
-            }
-            double duration = ytDlpService.getAudioDurationSeconds(outputFile.getAbsolutePath());
-            if (!ytDlpService.isDurationWithinLimit(duration)) {
-                telegram.sendText(chatId, "[ERROR ☢️☣️] Trimmed audio is too long: " + formatDuration(duration) + ".");
-                return;
-            }
-            if (!ytDlpService.isFileSizeWithinLimit(outputFile)) {
-                long fileSize = outputFile.exists() ? outputFile.length() : -1;
-                telegram.sendText(chatId, "[ERROR ☢️☣️] Trimmed audio exceeds 50 MB (" + String.format(Locale.US, "%.2f MB", fileSize / 1024.0 / 1024.0) + ").");
-                return;
-            }
+                double duration = ytDlpService.getAudioDurationSeconds(outputFile.getAbsolutePath());
+                if (!ytDlpService.isDurationWithinLimit(duration)) {
+                    telegram.sendText(chatId, "[ERROR ☢️☣️] Trimmed audio is too long: " + formatDuration(duration) + ".");
+                    ytDlpService.deleteFileIfExists(outputFile);
+                    return;
+                }
+                if (!ytDlpService.isFileSizeWithinLimit(outputFile)) {
+                    long fileSize = outputFile.exists() ? outputFile.length() : -1;
+                    telegram.sendText(chatId, "[ERROR ☢️☣️] Trimmed audio exceeds 50 MB (" + String.format(Locale.US, "%.2f MB", fileSize / 1024.0 / 1024.0) + ").");
+                    ytDlpService.deleteFileIfExists(outputFile);
+                    return;
+                }
+                duplicateIndex.addOrUpdateDownloadedFile(outputFileName, outputFile.toPath());
 
-            StringBuilder msg = new StringBuilder();
-            msg.append("[SUCCESS ✅] Audio cut ready! ✂️\n");
-            msg.append("File: ").append(displayFileName(attachment.fileName())).append("\n");
-            msg.append("Range: ").append(range.formatLabel());
-            telegram.sendAudio(chatId.toString(), outputFile, msg.toString());
+                StringBuilder msg = new StringBuilder();
+                msg.append("[SUCCESS ✅] Audio cut ready! ✂️\n");
+                msg.append("File: ").append(outputFileName).append("\n");
+                msg.append("Saved: ").append(outputFile.getAbsolutePath()).append("\n");
+                msg.append("Range: ").append(range.formatLabel());
+                telegram.sendAudio(chatId.toString(), outputFile, msg.toString());
+            }
             logger.info("[{}] [SendAudio] Sent cut upload: {} | Range: {}", now(), attachment.fileName(), range.formatLabel());
         } catch (Exception e) {
             logger.error("[{}] Uploaded audio cut failed", now(), e);
@@ -330,9 +338,6 @@ public class CommandHandler {
             sending[0] = false;
             if (sourceFile != null) {
                 ytDlpService.deleteFileIfExists(sourceFile);
-            }
-            if (outputFile != null) {
-                ytDlpService.deleteFileIfExists(outputFile);
             }
             if (thumbnailFile != null) {
                 ytDlpService.deleteFileIfExists(thumbnailFile);
