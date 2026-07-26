@@ -357,7 +357,18 @@ public class YtDlpService {
         if (coverFile == null) {
             return;
         }
+        attachCoverArt(audioFile, coverFile, logPrefix);
+        coverFile.delete();
+    }
 
+    public boolean attachCoverArt(File audioFile, File coverFile) throws IOException, InterruptedException {
+        return attachCoverArt(audioFile, coverFile, "[ffmpeg-cover]");
+    }
+
+    private boolean attachCoverArt(File audioFile, File coverFile, String logPrefix) throws IOException, InterruptedException {
+        if (audioFile == null || coverFile == null || !audioFile.exists() || !coverFile.exists()) {
+            return false;
+        }
         File parent = audioFile.getParentFile();
         File coveredOutput = new File(
                 parent != null ? parent : new File("."),
@@ -394,12 +405,13 @@ public class YtDlpService {
         if (exitCode == 0 && coveredOutput.exists() && coveredOutput.length() > 0) {
             Files.move(coveredOutput.toPath(), audioFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             logger.info("[{}] {} Preserved cover art for {}", now(), logPrefix, audioFile.getAbsolutePath());
+            return true;
         } else {
             logger.warn("[{}] {} Could not reattach cover art for {}. Exit code: {}. Output:\n{}",
                     now(), logPrefix, audioFile.getAbsolutePath(), exitCode, output);
             coveredOutput.delete();
+            return false;
         }
-        coverFile.delete();
     }
 
     private File extractEmbeddedCoverArt(File sourceFile, String logPrefix) throws IOException, InterruptedException {

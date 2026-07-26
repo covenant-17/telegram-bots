@@ -239,4 +239,12 @@ class CommandHandlerTest {
         assertEquals("The_Ghost_Aura_Nihilism", CommandHandler.cutBaseName("The Ghost Aura - Nihilism (Official Video).mp3"));
         assertEquals("Audio", CommandHandler.cutBaseName(null));
     }
+
+    @Test
+    @DisplayName("Should keep clean output file name for uploaded cut")
+    void testCutOutputFileNameKeepsCleanName() {
+        assertEquals("Dollwave Beyond.mp3", CommandHandler.cutOutputFileName("Dollwave_Beyond.mp3"));
+        assertEquals("Dollwave Beyond.mp3", CommandHandler.cutOutputFileName("Dollwave Beyond.mp3"));
+        assertEquals("Audio.mp3", CommandHandler.cutOutputFileName(null));
+    }
 }
