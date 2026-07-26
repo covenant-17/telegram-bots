@@ -153,26 +153,21 @@ public class FileNameSanitizer {
      * @param extension filter by extension (e.g., ".mp3"), if null - all files
      * @param dryRun    if true - only shows what will be renamed, without changes
      */
-    public static void sanitizeAllInDirectory(String dirPath, String extension, boolean dryRun) {
+    public static SanitizeDirectoryResult sanitizeAllInDirectoryWithResult(String dirPath, String extension, boolean dryRun) {
         File dir = new File(dirPath);
         if (!dir.isDirectory()) {
-            System.out.println("[SUMMARY] Directory not found: " + dirPath);
-            return;
+            return new SanitizeDirectoryResult(dirPath, dryRun, true, false, 0, 0, 0, 0, 0, java.util.List.of());
         }
         File[] files = dir.listFiles();
         if (files == null) {
-            System.out.println("[SUMMARY] Directory is empty: " + dirPath);
-            return;
+            return new SanitizeDirectoryResult(dirPath, dryRun, false, true, 0, 0, 0, 0, 0, java.util.List.of());
         }
         int affected = 0;
         int changed = 0;
         int unchanged = 0;
+        int failed = 0;
         int total = 0;
-        if (dryRun) {
-            System.out.println("\n==================== [DRY RUN START] ======================");
-        } else {
-            System.out.println("\n====================== [RENAME START] ======================");
-        }
+        java.util.List<String> details = new java.util.ArrayList<>();
         for (File file : files) {
             if (file.isFile() && (extension == null || file.getName().toLowerCase().endsWith(extension))) {
                 total++;
@@ -188,39 +183,82 @@ public class FileNameSanitizer {
                     affected++;
                     File newFile = new File(dir, newName);
                     if (dryRun) {
-                        System.out.println("[DRY RUN] Would rename: " + file.getName() + " -> " + newName);
+                        details.add("Would rename: " + file.getName() + " -> " + newName);
                     } else {
                         boolean ok = file.renameTo(newFile);
-                        System.out.println((ok ? "Renamed: " : "Failed: ") + file.getName() + " -> " + newName);
-                        if (ok)
+                        details.add((ok ? "Renamed: " : "Failed: ") + file.getName() + " -> " + newName);
+                        if (ok) {
                             changed++;
+                        } else {
+                            failed++;
+                        }
                     }
                 } else {
                     unchanged++;
-                    System.out.println("[OK] Already clean: " + file.getName());
                 }
             }
         }
+        return new SanitizeDirectoryResult(dirPath, dryRun, false, false, total, affected, changed, unchanged, failed, details);
+    }
+
+    public static void sanitizeAllInDirectory(String dirPath, String extension, boolean dryRun) {
+        SanitizeDirectoryResult result = sanitizeAllInDirectoryWithResult(dirPath, extension, dryRun);
+        if (result.directoryMissing()) {
+            System.out.println("[SUMMARY] Directory not found: " + dirPath);
+            return;
+        }
+        if (result.directoryUnreadable()) {
+            System.out.println("[SUMMARY] Directory is empty: " + dirPath);
+            return;
+        }
         if (dryRun) {
+            System.out.println("\n==================== [DRY RUN START] ======================");
+            for (String detail : result.details()) {
+                System.out.println("[DRY RUN] " + detail);
+            }
             System.out.println("===================== [DRY RUN END] =======================");
             System.out.println("\n==================== [DRY RUN SUMMARY] ====================");
-            System.out.println("Total files checked: " + total);
-            System.out.println("Files to be renamed: " + affected);
-            System.out.println("Files already clean: " + unchanged);
-            if (affected == 0) {
+            System.out.println("Total files checked: " + result.total());
+            System.out.println("Files to be renamed: " + result.affected());
+            System.out.println("Files already clean: " + result.unchanged());
+            if (result.affected() == 0) {
                 System.out.println("✅ No files to rename in " + dirPath);
             }
             System.out.println("==========================================================\n");
         } else {
+            System.out.println("\n====================== [RENAME START] ======================");
+            for (String detail : result.details()) {
+                System.out.println(detail);
+            }
+            for (int i = 0; i < result.unchanged(); i++) {
+                System.out.println("[OK] Already clean");
+            }
             System.out.println("====================== [RENAME END] =======================");
             System.out.println("\n======================== [SUMMARY] ========================");
-            System.out.println("Total files checked: " + total);
-            System.out.println("Files renamed: " + changed + " out of " + affected);
-            System.out.println("Files already clean: " + unchanged);
-            if (affected == 0) {
+            System.out.println("Total files checked: " + result.total());
+            System.out.println("Files renamed: " + result.changed() + " out of " + result.affected());
+            System.out.println("Files already clean: " + result.unchanged());
+            if (result.failed() > 0) {
+                System.out.println("Files failed: " + result.failed());
+            }
+            if (result.affected() == 0) {
                 System.out.println("✅ No files to rename in " + dirPath);
             }
             System.out.println("==========================================================\n");
         }
+    }
+
+    public record SanitizeDirectoryResult(
+            String directory,
+            boolean dryRun,
+            boolean directoryMissing,
+            boolean directoryUnreadable,
+            int total,
+            int affected,
+            int changed,
+            int unchanged,
+            int failed,
+            java.util.List<String> details
+    ) {
     }
 }

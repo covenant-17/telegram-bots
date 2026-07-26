@@ -33,6 +33,10 @@ public class CommandHandler {
     private static final String FORCE_DOWNLOAD_CALLBACK_PREFIX = "dupdl:";
     private static final String CHAPTER_DOWNLOAD_CALLBACK_PREFIX = "chapdl:";
     private static final long PENDING_DOWNLOAD_TTL_MILLIS = 24L * 60L * 60L * 1000L;
+    private static final java.util.regex.Pattern CUT_COMMAND_PATTERN = java.util.regex.Pattern.compile(
+            "^\\s*/cut(?:@\\w+)?\\s+(\\d+(?::\\d{1,2}){0,2}(?:\\.\\d+)?)\\s+(\\d+(?::\\d{1,2}){0,2}(?:\\.\\d+)?)\\s*$",
+            java.util.regex.Pattern.CASE_INSENSITIVE
+    );
 
     /**
      * Returns the current date and time as a formatted string (yyyy-MM-dd HH:mm:ss).
@@ -73,6 +77,279 @@ public class CommandHandler {
         return "- " + url + " -> " + fileName;
     }
 
+    static boolean isCutCommand(String text) {
+        if (text == null) {
+            return false;
+        }
+        String command = text.trim().split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
+        int botMention = command.indexOf('@');
+        if (botMention >= 0) {
+            command = command.substring(0, botMention);
+        }
+        return "/cut".equals(command);
+    }
+
+    static AudioClipRange parseCutCommandRange(String text) {
+        java.util.regex.Matcher matcher = CUT_COMMAND_PATTERN.matcher(text == null ? "" : text);
+        if (!matcher.matches()) {
+            return null;
+        }
+        try {
+            double start = AudioClipRange.parseTimeSeconds(matcher.group(1));
+            double end = AudioClipRange.parseTimeSeconds(matcher.group(2));
+            return new AudioClipRange(start, end);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static boolean isSanitizeMp3Command(String text) {
+        if (text == null) {
+            return false;
+        }
+        String command = text.trim().split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
+        int botMention = command.indexOf('@');
+        if (botMention >= 0) {
+            command = command.substring(0, botMention);
+        }
+        return "/sanitize_mp3".equals(command) || "/delete_mp3".equals(command);
+    }
+
+    static boolean isSanitizeMp3DryRun(String text) {
+        if (text == null) {
+            return false;
+        }
+        String normalized = text.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains(" dry")
+                || normalized.contains(" dry-run")
+                || normalized.contains(" preview")
+                || normalized.endsWith(" true");
+    }
+
+    static String buildSanitizeMp3Summary(FileNameSanitizer.SanitizeDirectoryResult result) {
+        if (result.directoryMissing()) {
+            return "[ERROR ☢️☣️] MP3 workzone not found:\n" + result.directory();
+        }
+        if (result.directoryUnreadable()) {
+            return "[ERROR ☢️☣️] MP3 workzone cannot be read:\n" + result.directory();
+        }
+        StringBuilder msg = new StringBuilder();
+        msg.append(result.dryRun() ? "[DRY RUN] MP3 sanitize preview complete.\n" : "[SUCCESS ✅] MP3 sanitize complete.\n");
+        msg.append("Directory: ").append(result.directory()).append("\n");
+        msg.append("Total checked: ").append(result.total()).append("\n");
+        if (result.dryRun()) {
+            msg.append("Files to rename: ").append(result.affected()).append("\n");
+        } else {
+            msg.append("Files renamed: ").append(result.changed()).append(" out of ").append(result.affected()).append("\n");
+            msg.append("Files failed: ").append(result.failed()).append("\n");
+        }
+        msg.append("Already clean: ").append(result.unchanged());
+        if (!result.details().isEmpty()) {
+            msg.append("\n\nDetails:\n");
+            int limit = Math.min(result.details().size(), 20);
+            for (int i = 0; i < limit; i++) {
+                msg.append("- ").append(result.details().get(i)).append("\n");
+            }
+            if (result.details().size() > limit) {
+                msg.append("...and ").append(result.details().size() - limit).append(" more");
+            }
+        }
+        return msg.toString().trim();
+    }
+
+    private static boolean handleSanitizeMp3Command(TelegramService telegram, Long chatId, String text) {
+        boolean dryRun = isSanitizeMp3DryRun(text);
+        java.io.File workzone = Utils.getYoutubeMp3WorkzoneDir();
+        telegram.sendText(chatId, dryRun
+                ? "[DRY RUN] Checking MP3 names in workzone..."
+                : "[STARTED] Sanitizing MP3 names in workzone...");
+        executor.submit(() -> {
+            try {
+                FileNameSanitizer.SanitizeDirectoryResult result =
+                        FileNameSanitizer.sanitizeAllInDirectoryWithResult(workzone.getAbsolutePath(), ".mp3", dryRun);
+                telegram.sendText(chatId, buildSanitizeMp3Summary(result));
+                logger.info("[{}] MP3 sanitize command finished. dryRun={}, dir={}, total={}, affected={}, changed={}, failed={}",
+                        now(), dryRun, result.directory(), result.total(), result.affected(), result.changed(), result.failed());
+            } catch (Exception e) {
+                logger.error("[{}] MP3 sanitize command failed", now(), e);
+                telegram.sendText(chatId, "[ERROR ☢️☣️] MP3 sanitize failed: " + e.getMessage());
+            }
+        });
+        return true;
+    }
+
+    private static String messageCommandText(Message message) {
+        if (message == null) {
+            return null;
+        }
+        if (message.hasText()) {
+            return message.getText();
+        }
+        String caption = message.getCaption();
+        if (caption != null && !caption.isBlank()) {
+            return caption;
+        }
+        return null;
+    }
+
+    static TelegramAudioAttachment extractAudioAttachment(Message message) {
+        if (message == null) {
+            return null;
+        }
+        if (message.hasAudio() && message.getAudio() != null) {
+            org.telegram.telegrambots.meta.api.objects.Audio audio = message.getAudio();
+            String fileName = audio.getFileName();
+            if (fileName == null || fileName.isBlank()) {
+                fileName = audio.getTitle();
+            }
+            return new TelegramAudioAttachment(audio.getFileId(), fileName);
+        }
+        if (message.hasDocument() && message.getDocument() != null) {
+            org.telegram.telegrambots.meta.api.objects.Document document = message.getDocument();
+            String fileName = document.getFileName();
+            String mimeType = document.getMimeType();
+            if (isAudioDocument(fileName, mimeType)) {
+                return new TelegramAudioAttachment(document.getFileId(), fileName);
+            }
+        }
+        return null;
+    }
+
+    static boolean isAudioDocument(String fileName, String mimeType) {
+        if (mimeType != null && mimeType.toLowerCase(Locale.ROOT).startsWith("audio/")) {
+            return true;
+        }
+        if (fileName == null) {
+            return false;
+        }
+        String normalized = fileName.toLowerCase(Locale.ROOT);
+        return normalized.endsWith(".mp3")
+                || normalized.endsWith(".m4a")
+                || normalized.endsWith(".wav")
+                || normalized.endsWith(".flac")
+                || normalized.endsWith(".ogg")
+                || normalized.endsWith(".opus")
+                || normalized.endsWith(".aac");
+    }
+
+    private static boolean handleCutCommand(TelegramService telegram, Long chatId, Message message, String text) {
+        AudioClipRange range = parseCutCommandRange(text);
+        if (range == null) {
+            telegram.sendText(chatId, "[ERROR ☢️☣️] Usage: /cut 0:00 2:50 with an attached audio file.");
+            return true;
+        }
+        TelegramAudioAttachment attachment = extractAudioAttachment(message);
+        if (attachment == null || attachment.fileId() == null || attachment.fileId().isBlank()) {
+            telegram.sendText(chatId, "[ERROR ☢️☣️] Attach an audio file with /cut " + range.formatLabel().replace(" - ", " ") + ".");
+            return true;
+        }
+        telegram.sendText(chatId, "[SUCCESS ✅] File accepted! ✂️ Starting trim " + range.formatLabel() + "...");
+        telegram.sendChatAction(chatId, ActionType.UPLOADDOCUMENT);
+        executor.submit(() -> processUploadedAudioCut(telegram, chatId, attachment, range));
+        return true;
+    }
+
+    private static void processUploadedAudioCut(TelegramService telegram, Long chatId, TelegramAudioAttachment attachment, AudioClipRange range) {
+        java.io.File sourceFile = null;
+        java.io.File outputFile = null;
+        final boolean[] sending = {true};
+        Thread progressThread = new Thread(() -> {
+            while (sending[0]) {
+                telegram.sendChatAction(chatId, ActionType.UPLOADDOCUMENT);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    logger.warn("[{}] Uploaded cut progress thread interrupted: {}", now(), e.getMessage(), e);
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        });
+        progressThread.start();
+        try {
+            java.io.File saveDir = Utils.getYoutubeMp3WorkzoneDir();
+            java.io.File tempDir = new java.io.File(saveDir, "temp_mp3");
+            if (!tempDir.exists()) tempDir.mkdirs();
+
+            String baseName = cutBaseName(attachment.fileName());
+            String token = Long.toString(System.currentTimeMillis());
+            sourceFile = new java.io.File(tempDir, baseName + "_upload_" + token + sourceExtension(attachment.fileName()));
+            outputFile = new java.io.File(tempDir, baseName + "_cut_" + token + ".mp3");
+
+            telegram.downloadFile(attachment.fileId(), sourceFile);
+            if (!sourceFile.exists() || sourceFile.length() == 0) {
+                telegram.sendText(chatId, "[ERROR ☢️☣️] Could not download the attached audio file.");
+                return;
+            }
+
+            boolean cutOk = ytDlpService.splitAudioRange(sourceFile, range, outputFile);
+            if (!cutOk || !outputFile.exists() || outputFile.length() == 0) {
+                telegram.sendText(chatId, "[ERROR ☢️☣️] Error trimming audio range " + range.formatLabel() + ". ✂️");
+                return;
+            }
+            double duration = ytDlpService.getAudioDurationSeconds(outputFile.getAbsolutePath());
+            if (!ytDlpService.isDurationWithinLimit(duration)) {
+                telegram.sendText(chatId, "[ERROR ☢️☣️] Trimmed audio is too long: " + formatDuration(duration) + ".");
+                return;
+            }
+            if (!ytDlpService.isFileSizeWithinLimit(outputFile)) {
+                long fileSize = outputFile.exists() ? outputFile.length() : -1;
+                telegram.sendText(chatId, "[ERROR ☢️☣️] Trimmed audio exceeds 50 MB (" + String.format(Locale.US, "%.2f MB", fileSize / 1024.0 / 1024.0) + ").");
+                return;
+            }
+
+            StringBuilder msg = new StringBuilder();
+            msg.append("[SUCCESS ✅] Audio cut ready! ✂️\n");
+            msg.append("File: ").append(displayFileName(attachment.fileName())).append("\n");
+            msg.append("Range: ").append(range.formatLabel());
+            telegram.sendAudio(chatId.toString(), outputFile, msg.toString());
+            logger.info("[{}] [SendAudio] Sent cut upload: {} | Range: {}", now(), attachment.fileName(), range.formatLabel());
+        } catch (Exception e) {
+            logger.error("[{}] Uploaded audio cut failed", now(), e);
+            telegram.sendText(chatId, "[ERROR ☢️☣️] Audio cut failed: " + e.getMessage());
+        } finally {
+            sending[0] = false;
+            if (sourceFile != null) {
+                ytDlpService.deleteFileIfExists(sourceFile);
+            }
+            if (outputFile != null) {
+                ytDlpService.deleteFileIfExists(outputFile);
+            }
+            try {
+                progressThread.join();
+            } catch (InterruptedException e) {
+                logger.warn("[{}] Uploaded cut progress thread join interrupted: {}", now(), e.getMessage(), e);
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    static String cutBaseName(String fileName) {
+        String displayName = displayFileName(fileName);
+        int dot = displayName.lastIndexOf('.');
+        if (dot > 0) {
+            displayName = displayName.substring(0, dot);
+        }
+        String sanitized = FileNameSanitizer.sanitize(displayName);
+        return sanitized == null || sanitized.isBlank() ? "Audio" : sanitized.replaceAll("[^A-Za-z0-9._ -]", "").replaceAll("\\s+", "_");
+    }
+
+    private static String displayFileName(String fileName) {
+        return fileName == null || fileName.isBlank() ? "audio" : fileName;
+    }
+
+    private static String sourceExtension(String fileName) {
+        if (fileName == null) {
+            return ".audio";
+        }
+        int dot = fileName.lastIndexOf('.');
+        if (dot < 0 || dot == fileName.length() - 1) {
+            return ".audio";
+        }
+        String ext = fileName.substring(dot).toLowerCase(Locale.ROOT);
+        return ext.matches("\\.[a-z0-9]{1,8}") ? ext : ".audio";
+    }
+
     private static void sendMetadataFallbackWarningIfAny(TelegramService telegram, Long chatId, java.util.List<String> details) {
         if (details == null || details.isEmpty()) {
             return;
@@ -97,13 +374,22 @@ public class CommandHandler {
         if (update.hasCallbackQuery()) {
             return handleCallback(telegram, update.getCallbackQuery());
         }
-        if (update.hasMessage() && update.getMessage() != null && update.getMessage().hasText()) {
+        if (update.hasMessage() && update.getMessage() != null) {
             Message message = update.getMessage();
-            String text = message.getText();
+            String text = messageCommandText(message);
             
             // Check for null text
             if (text == null) {
                 return false;
+            }
+            if (isCutCommand(text)) {
+                return handleCutCommand(telegram, message.getChatId(), message, text);
+            }
+            if (!message.hasText()) {
+                return false;
+            }
+            if (isSanitizeMp3Command(text)) {
+                return handleSanitizeMp3Command(telegram, message.getChatId(), text);
             }
             java.util.List<DownloadRequest> requests = DownloadRequestParser.parse(text);
             if (requests.size() > 1) {
@@ -877,6 +1163,9 @@ public class CommandHandler {
         private boolean isExpired() {
             return System.currentTimeMillis() - createdAtMillis > PENDING_DOWNLOAD_TTL_MILLIS;
         }
+    }
+
+    record TelegramAudioAttachment(String fileId, String fileName) {
     }
 
     private record SkippedChapter(ChapterTrackPlan plan, MusicDuplicateIndex.DuplicateMatch duplicate) {

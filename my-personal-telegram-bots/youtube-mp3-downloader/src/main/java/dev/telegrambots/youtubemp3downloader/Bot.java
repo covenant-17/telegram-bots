@@ -5,6 +5,7 @@ import dev.telegrambots.shared.BaseBotConfig;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -135,5 +136,12 @@ public class Bot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             logger.error("Failed to send chat action to chat {}: {}", chatId, e.getMessage(), e);
         }
+    }
+
+    public java.io.File downloadTelegramFile(String fileId, java.io.File outputFile) throws TelegramApiException {
+        GetFile getFile = new GetFile();
+        getFile.setFileId(fileId);
+        org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(getFile);
+        return downloadFile(telegramFile, outputFile);
     }
 }

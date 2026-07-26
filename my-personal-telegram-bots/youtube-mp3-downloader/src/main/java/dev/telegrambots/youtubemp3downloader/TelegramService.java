@@ -65,4 +65,8 @@ public class TelegramService {
             logger.error("[{}] [Telegram] Failed to send chat action: {}", now(), action, e);
         }
     }
+
+    public File downloadFile(String fileId, File outputFile) throws org.telegram.telegrambots.meta.exceptions.TelegramApiException {
+        return bot.downloadTelegramFile(fileId, outputFile);
+    }
 }

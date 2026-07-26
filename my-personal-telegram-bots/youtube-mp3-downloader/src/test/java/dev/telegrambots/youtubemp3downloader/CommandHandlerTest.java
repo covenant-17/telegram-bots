@@ -148,4 +148,95 @@ class CommandHandlerTest {
                         "https://www.youtube.com/watch?v=4DVdqY5KwXw",
                         "video-4DVdqY5KwXw.mp3"));
     }
+
+    @Test
+    @DisplayName("Should detect MP3 sanitize Telegram commands")
+    void testDetectsSanitizeMp3Commands() {
+        assertTrue(CommandHandler.isSanitizeMp3Command("/sanitize_mp3"));
+        assertTrue(CommandHandler.isSanitizeMp3Command("/sanitize_mp3@YoutubeMp3Bot dry"));
+        assertTrue(CommandHandler.isSanitizeMp3Command("/delete_mp3"));
+        assertFalse(CommandHandler.isSanitizeMp3Command("/start"));
+        assertFalse(CommandHandler.isSanitizeMp3Command("https://youtu.be/dQw4w9WgXcQ"));
+    }
+
+    @Test
+    @DisplayName("Should detect dry-run flag for MP3 sanitize command")
+    void testDetectsSanitizeMp3DryRun() {
+        assertTrue(CommandHandler.isSanitizeMp3DryRun("/sanitize_mp3 dry"));
+        assertTrue(CommandHandler.isSanitizeMp3DryRun("/sanitize_mp3 preview"));
+        assertTrue(CommandHandler.isSanitizeMp3DryRun("/sanitize_mp3 true"));
+        assertFalse(CommandHandler.isSanitizeMp3DryRun("/sanitize_mp3"));
+    }
+
+    @Test
+    @DisplayName("Should build MP3 sanitize summary")
+    void testBuildSanitizeMp3Summary() {
+        FileNameSanitizer.SanitizeDirectoryResult result = new FileNameSanitizer.SanitizeDirectoryResult(
+                "/tmp/music",
+                false,
+                false,
+                false,
+                3,
+                2,
+                2,
+                1,
+                0,
+                java.util.List.of("Renamed: Dirty Name.mp3 -> Clean Name.mp3")
+        );
+
+        String summary = CommandHandler.buildSanitizeMp3Summary(result);
+
+        assertTrue(summary.contains("MP3 sanitize complete"));
+        assertTrue(summary.contains("Files renamed: 2 out of 2"));
+        assertTrue(summary.contains("Already clean: 1"));
+        assertTrue(summary.contains("Dirty Name.mp3 -> Clean Name.mp3"));
+    }
+
+    @Test
+    @DisplayName("Should parse cut command range")
+    void testParseCutCommandRange() {
+        AudioClipRange range = CommandHandler.parseCutCommandRange("/cut 0:00 2:50");
+
+        assertNotNull(range);
+        assertEquals(0.0, range.startSeconds());
+        assertEquals(170.0, range.endSeconds());
+        assertEquals("0:00 - 2:50", range.formatLabel());
+        assertTrue(CommandHandler.isCutCommand("/cut@YoutubeMp3Bot 0:00 2:50"));
+    }
+
+    @Test
+    @DisplayName("Should reject invalid cut command range")
+    void testRejectsInvalidCutCommandRange() {
+        assertNull(CommandHandler.parseCutCommandRange("/cut 2:50 0:00"));
+        assertNull(CommandHandler.parseCutCommandRange("/cut nope 2:50"));
+        assertNull(CommandHandler.parseCutCommandRange("/start 0:00 2:50"));
+        assertFalse(CommandHandler.isCutCommand("/sanitize_mp3"));
+    }
+
+    @Test
+    @DisplayName("Should detect audio document attachments for cut command")
+    void testDetectsAudioDocumentAttachment() {
+        org.telegram.telegrambots.meta.api.objects.Document document =
+                mock(org.telegram.telegrambots.meta.api.objects.Document.class);
+        when(document.getFileId()).thenReturn("file-id-123");
+        when(document.getFileName()).thenReturn("Track Name.mp3");
+        when(document.getMimeType()).thenReturn("audio/mpeg");
+        when(message.hasDocument()).thenReturn(true);
+        when(message.getDocument()).thenReturn(document);
+
+        CommandHandler.TelegramAudioAttachment attachment = CommandHandler.extractAudioAttachment(message);
+
+        assertNotNull(attachment);
+        assertEquals("file-id-123", attachment.fileId());
+        assertEquals("Track Name.mp3", attachment.fileName());
+        assertTrue(CommandHandler.isAudioDocument("Track Name.mp3", null));
+        assertFalse(CommandHandler.isAudioDocument("notes.txt", "text/plain"));
+    }
+
+    @Test
+    @DisplayName("Should sanitize uploaded cut base name")
+    void testCutBaseNameSanitizesFileName() {
+        assertEquals("The_Ghost_Aura_Nihilism", CommandHandler.cutBaseName("The Ghost Aura - Nihilism (Official Video).mp3"));
+        assertEquals("Audio", CommandHandler.cutBaseName(null));
+    }
 }
