@@ -202,17 +202,21 @@ public class CommandHandler {
             if (fileName == null || fileName.isBlank()) {
                 fileName = audio.getTitle();
             }
-            return new TelegramAudioAttachment(audio.getFileId(), fileName);
+            return new TelegramAudioAttachment(audio.getFileId(), fileName, thumbnailFileId(audio.getThumbnail()));
         }
         if (message.hasDocument() && message.getDocument() != null) {
             org.telegram.telegrambots.meta.api.objects.Document document = message.getDocument();
             String fileName = document.getFileName();
             String mimeType = document.getMimeType();
             if (isAudioDocument(fileName, mimeType)) {
-                return new TelegramAudioAttachment(document.getFileId(), fileName);
+                return new TelegramAudioAttachment(document.getFileId(), fileName, thumbnailFileId(document.getThumbnail()));
             }
         }
         return null;
+    }
+
+    private static String thumbnailFileId(org.telegram.telegrambots.meta.api.objects.PhotoSize thumbnail) {
+        return thumbnail == null ? null : thumbnail.getFileId();
     }
 
     static boolean isAudioDocument(String fileName, String mimeType) {
@@ -252,6 +256,8 @@ public class CommandHandler {
     private static void processUploadedAudioCut(TelegramService telegram, Long chatId, TelegramAudioAttachment attachment, AudioClipRange range) {
         java.io.File sourceFile = null;
         java.io.File outputFile = null;
+        java.io.File thumbnailFile = null;
+        java.io.File jobDir = null;
         final boolean[] sending = {true};
         Thread progressThread = new Thread(() -> {
             while (sending[0]) {
@@ -271,10 +277,13 @@ public class CommandHandler {
             java.io.File tempDir = new java.io.File(saveDir, "temp_mp3");
             if (!tempDir.exists()) tempDir.mkdirs();
 
-            String baseName = cutBaseName(attachment.fileName());
             String token = Long.toString(System.currentTimeMillis());
-            sourceFile = new java.io.File(tempDir, baseName + "_upload_" + token + sourceExtension(attachment.fileName()));
-            outputFile = new java.io.File(tempDir, baseName + "_cut_" + token + ".mp3");
+            jobDir = new java.io.File(tempDir, "cut_" + token);
+            if (!jobDir.exists()) jobDir.mkdirs();
+            String tempBaseName = cutBaseName(attachment.fileName());
+            String outputFileName = cutOutputFileName(attachment.fileName());
+            sourceFile = new java.io.File(jobDir, tempBaseName + "_upload" + sourceExtension(attachment.fileName()));
+            outputFile = new java.io.File(jobDir, outputFileName);
 
             telegram.downloadFile(attachment.fileId(), sourceFile);
             if (!sourceFile.exists() || sourceFile.length() == 0) {
@@ -286,6 +295,16 @@ public class CommandHandler {
             if (!cutOk || !outputFile.exists() || outputFile.length() == 0) {
                 telegram.sendText(chatId, "[ERROR ☢️☣️] Error trimming audio range " + range.formatLabel() + ". ✂️");
                 return;
+            }
+            if (attachment.thumbnailFileId() != null && !attachment.thumbnailFileId().isBlank()) {
+                thumbnailFile = new java.io.File(jobDir, tempBaseName + "_thumbnail.jpg");
+                telegram.downloadFile(attachment.thumbnailFileId(), thumbnailFile);
+                if (thumbnailFile.exists() && thumbnailFile.length() > 0) {
+                    boolean coverOk = ytDlpService.attachCoverArt(outputFile, thumbnailFile);
+                    if (!coverOk) {
+                        logger.warn("[{}] Could not attach Telegram thumbnail for cut upload: {}", now(), attachment.fileName());
+                    }
+                }
             }
             double duration = ytDlpService.getAudioDurationSeconds(outputFile.getAbsolutePath());
             if (!ytDlpService.isDurationWithinLimit(duration)) {
@@ -315,6 +334,12 @@ public class CommandHandler {
             if (outputFile != null) {
                 ytDlpService.deleteFileIfExists(outputFile);
             }
+            if (thumbnailFile != null) {
+                ytDlpService.deleteFileIfExists(thumbnailFile);
+            }
+            if (jobDir != null && jobDir.exists()) {
+                jobDir.delete();
+            }
             try {
                 progressThread.join();
             } catch (InterruptedException e) {
@@ -332,6 +357,19 @@ public class CommandHandler {
         }
         String sanitized = FileNameSanitizer.sanitize(displayName);
         return sanitized == null || sanitized.isBlank() ? "Audio" : sanitized.replaceAll("[^A-Za-z0-9._ -]", "").replaceAll("\\s+", "_");
+    }
+
+    static String cutOutputFileName(String fileName) {
+        String displayName = displayFileName(fileName);
+        int dot = displayName.lastIndexOf('.');
+        if (dot > 0) {
+            displayName = displayName.substring(0, dot);
+        }
+        String sanitized = FileNameSanitizer.sanitize(displayName);
+        if (sanitized == null || sanitized.isBlank()) {
+            sanitized = "Audio";
+        }
+        return sanitized + ".mp3";
     }
 
     private static String displayFileName(String fileName) {
@@ -1165,7 +1203,7 @@ public class CommandHandler {
         }
     }
 
-    record TelegramAudioAttachment(String fileId, String fileName) {
+    record TelegramAudioAttachment(String fileId, String fileName, String thumbnailFileId) {
     }
 
     private record SkippedChapter(ChapterTrackPlan plan, MusicDuplicateIndex.DuplicateMatch duplicate) {
