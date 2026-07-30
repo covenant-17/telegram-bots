@@ -10,9 +10,11 @@ MANAGER_LOG="$LOG_DIR/manager-bot.log"
 MANAGER_ERR="$LOG_DIR/manager-bot-error.log"
 TRACE_LOG="$LOG_DIR/trace-keeper.log"
 TRACE_ERR="$LOG_DIR/trace-keeper-error.log"
+DISABLED_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/disabled"
 CHECK_INTERVAL=30  # seconds between checks
 
 mkdir -p "$LOG_DIR"
+mkdir -p "$DISABLED_DIR"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [watchdog] $1"
@@ -32,7 +34,14 @@ while true; do
 
     # --- trace-keeper ---
     TK_PIDS=$(ps aux | grep 'java' | grep "trace-keeper" | grep -v grep | awk '{print $2}')
-    if [ -z "$TK_PIDS" ]; then
+    if [ -f "$DISABLED_DIR/trace-keeper.disabled" ]; then
+        if [ -n "$TK_PIDS" ]; then
+            log "trace-keeper is disabled but still running. Killing..."
+            for pid in $TK_PIDS; do
+                kill -9 "$pid"
+            done
+        fi
+    elif [ -z "$TK_PIDS" ]; then
         log "trace-keeper is DOWN. Restarting..."
         nohup bash "$TRACE_START" >> "$TRACE_LOG" 2>> "$TRACE_ERR" &
         log "Started trace-keeper with PID $!."

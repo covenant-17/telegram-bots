@@ -40,6 +40,7 @@ public class ManagerBot extends TelegramLongPollingBot {
 
     private static final Logger logger = LoggerFactory.getLogger(ManagerBot.class);
     private static final String HOME = "/data/data/com.termux/files/home";
+    private static final String DISABLED_DIR = HOME + "/termuxserver/src/sh/disabled";
     private static final long DEAD_CHECK_INITIAL_DELAY_MINUTES = 1;
     private static final long DEAD_CHECK_INTERVAL_MINUTES = 60;
 
@@ -149,7 +150,14 @@ public class ManagerBot extends TelegramLongPollingBot {
         for (Map.Entry<String, AppDefinition> entry : AppRegistry.all().entrySet()) {
             AppDefinition app = entry.getValue();
             List<String> pids = ShellRunner.findPids(app.processPattern);
-            String status = pids.isEmpty() ? "💀 dead" : "✅ alive (pids: " + String.join(", ", pids) + ")";
+            String status;
+            if (isAutoRestartDisabled(app)) {
+                status = pids.isEmpty()
+                        ? "⏸ stopped by /kill"
+                        : "⏸ auto-restart disabled, still alive (pids: " + String.join(", ", pids) + ")";
+            } else {
+                status = pids.isEmpty() ? "💀 dead" : "✅ alive (pids: " + String.join(", ", pids) + ")";
+            }
             sb.append("• *").append(app.name).append("*: ").append(status).append("\n");
         }
         send(chatId, sb.toString().trim());
@@ -233,6 +241,7 @@ public class ManagerBot extends TelegramLongPollingBot {
         if (app.name.equals("manager-bot")) {
             doSelfRestart(chatId, app);
         } else {
+            enableAutoRestart(app);
             doRestart(chatId, app);
         }
     }
@@ -241,7 +250,7 @@ public class ManagerBot extends TelegramLongPollingBot {
         if (arg.matches("\\d+")) {
             boolean ok = ShellRunner.killByPid(arg);
             if (ok) {
-                send(chatId, "🛑 Killed PID " + arg + ".");
+                send(chatId, "🛑 Killed PID " + arg + ". Auto-restart state unchanged.");
             } else {
                 send(chatId, "❌ Failed to kill PID " + arg + " (no such process?).");
             }
@@ -252,11 +261,12 @@ public class ManagerBot extends TelegramLongPollingBot {
             send(chatId, unknownApp(appName)); return;
         }
         AppDefinition app = AppRegistry.get(appName);
+        disableAutoRestart(app);
         int killed = ShellRunner.killByPattern(app.processPattern);
         if (killed == 0) {
-            send(chatId, "ℹ️ *" + app.name + "* was not running.");
+            send(chatId, "ℹ️ *" + app.name + "* was not running. Auto-restart disabled.");
         } else {
-            send(chatId, "🛑 Killed " + killed + " process(es) for *" + app.name + "*.");
+            send(chatId, "🛑 Killed " + killed + " process(es) for *" + app.name + "*. Auto-restart disabled.");
         }
     }
 
@@ -265,6 +275,7 @@ public class ManagerBot extends TelegramLongPollingBot {
             send(chatId, unknownApp(appName)); return;
         }
         AppDefinition app = AppRegistry.get(appName);
+        enableAutoRestart(app);
         doStart(chatId, app);
     }
 
@@ -273,6 +284,7 @@ public class ManagerBot extends TelegramLongPollingBot {
             send(chatId, unknownApp(appName)); return;
         }
         AppDefinition app = AppRegistry.get(appName);
+        enableAutoRestart(app);
         doRestart(chatId, app);
     }
 
@@ -473,6 +485,9 @@ public class ManagerBot extends TelegramLongPollingBot {
     private List<AppDefinition> findDeadApps() {
         List<AppDefinition> deadApps = new ArrayList<>();
         for (AppDefinition app : AppRegistry.all().values()) {
+            if (isAutoRestartDisabled(app)) {
+                continue;
+            }
             if (ShellRunner.findPids(app.processPattern).isEmpty()) {
                 deadApps.add(app);
             }
@@ -547,6 +562,22 @@ public class ManagerBot extends TelegramLongPollingBot {
     private String truncate(String s, int maxLen) {
         if (s == null) return "";
         return s.length() <= maxLen ? s : s.substring(s.length() - maxLen);
+    }
+
+    private void disableAutoRestart(AppDefinition app) {
+        ShellRunner.run("mkdir -p \"" + DISABLED_DIR + "\" && touch \"" + disabledMarkerPath(app) + "\"", null);
+    }
+
+    private void enableAutoRestart(AppDefinition app) {
+        ShellRunner.run("rm -f \"" + disabledMarkerPath(app) + "\"", null);
+    }
+
+    private boolean isAutoRestartDisabled(AppDefinition app) {
+        return ShellRunner.run("[ -f \"" + disabledMarkerPath(app) + "\" ]", null).isSuccess();
+    }
+
+    private String disabledMarkerPath(AppDefinition app) {
+        return DISABLED_DIR + "/" + app.name + ".disabled";
     }
 
     private int parseIntSafe(String s, int def) {
