@@ -7,6 +7,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.objects.Chat;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -72,6 +74,30 @@ class CommandHandlerTest {
         boolean result = CommandHandler.handle(bot, update);
         
         assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("Should handle start command and log sender details")
+    void testHandleStartCommand() {
+        User user = new User(42L, "Boss", false);
+        user.setLastName("Sender");
+        user.setUserName("boss_suck_my_bot");
+        Chat chat = new Chat(123456789L, "private");
+
+        when(update.hasMessage()).thenReturn(true);
+        when(message.hasText()).thenReturn(true);
+        when(message.getText()).thenReturn("/start");
+        when(message.getFrom()).thenReturn(user);
+        when(message.getChat()).thenReturn(chat);
+
+        boolean result = CommandHandler.handle(bot, update);
+
+        assertTrue(result);
+        verify(bot).sendTextMessage(eq(123456789L), contains("YouTube link"));
+        assertEquals(
+                "userId=42 username=@boss_suck_my_bot firstName=Boss lastName=Sender chatId=123456789 chatType=private",
+                CommandHandler.senderLogLine(message)
+        );
     }
 
     @Test
