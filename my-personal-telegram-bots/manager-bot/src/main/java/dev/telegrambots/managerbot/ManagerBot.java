@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -88,14 +89,19 @@ public class ManagerBot extends TelegramLongPollingBot {
         if (!update.hasMessage() || !update.getMessage().hasText()) return;
 
         Message message = update.getMessage();
-        long userId = message.getFrom().getId();
+        User user = message.getFrom();
+        long userId = user == null || user.getId() == null ? -1L : user.getId();
         long chatId = message.getChatId();
+        String text = message.getText().trim();
 
         if (!config.isAllowed(userId)) {
+            logger.warn("Rejected manager-bot command from {}", senderLogLine(message));
+            if (isStartCommand(text)) {
+                send(chatId, "Access request logged. Ask the bot owner to whitelist your Telegram ID.");
+            }
             return;
         }
 
-        String text = message.getText().trim();
         String[] parts = text.split("\\s+", 3);
         String command = parts[0].toLowerCase();
 
@@ -421,6 +427,50 @@ public class ManagerBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             logger.error("Dead bot cron failed: {}", e.getMessage(), e);
         }
+    }
+
+    static boolean isStartCommand(String text) {
+        return "/start".equals(normalizedCommand(text));
+    }
+
+    private static String normalizedCommand(String text) {
+        if (text == null) {
+            return "";
+        }
+        String command = text.trim().split("\\s+", 2)[0].toLowerCase();
+        int botMention = command.indexOf('@');
+        if (botMention >= 0) {
+            command = command.substring(0, botMention);
+        }
+        return command;
+    }
+
+    static String senderLogLine(Message message) {
+        if (message == null) {
+            return "userId=unknown username=unknown firstName=unknown lastName=unknown chatId=unknown chatType=unknown";
+        }
+        User user = message.getFrom();
+        return "userId=" + value(user == null ? null : user.getId())
+                + " username=" + username(user == null ? null : user.getUserName())
+                + " firstName=" + value(user == null ? null : user.getFirstName())
+                + " lastName=" + value(user == null ? null : user.getLastName())
+                + " chatId=" + value(message.getChatId())
+                + " chatType=" + value(message.getChat() == null ? null : message.getChat().getType());
+    }
+
+    private static String username(String username) {
+        if (username == null || username.isBlank()) {
+            return "unknown";
+        }
+        return username.startsWith("@") ? username : "@" + username;
+    }
+
+    private static String value(Object value) {
+        if (value == null) {
+            return "unknown";
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? "unknown" : text;
     }
 
     private List<AppDefinition> findDeadApps() {
