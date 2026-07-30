@@ -96,9 +96,6 @@ public class ManagerBot extends TelegramLongPollingBot {
 
         if (!config.isAllowed(userId)) {
             logger.warn("Rejected manager-bot command from {}", senderLogLine(message));
-            if (isStartCommand(text)) {
-                send(chatId, "Access request logged. Ask the bot owner to whitelist your Telegram ID.");
-            }
             return;
         }
 
