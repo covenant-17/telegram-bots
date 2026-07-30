@@ -6,8 +6,10 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -62,6 +64,18 @@ public class Bot extends TelegramLongPollingBot {
             CommandHandler.handle(this, update);
         } catch (Exception e) {
             logger.error("Critical error in YouTube MP3 Bot update processing: {}", e.getMessage(), e);
+        }
+    }
+
+    public void registerBotCommands() {
+        SetMyCommands commands = new SetMyCommands();
+        commands.setCommands(BotCommandCatalog.commands());
+        commands.setScope(new BotCommandScopeDefault());
+        try {
+            execute(commands);
+            logger.info("Registered {} Telegram bot commands", BotCommandCatalog.commands().size());
+        } catch (TelegramApiException e) {
+            logger.error("Failed to register Telegram bot commands: {}", e.getMessage(), e);
         }
     }
 

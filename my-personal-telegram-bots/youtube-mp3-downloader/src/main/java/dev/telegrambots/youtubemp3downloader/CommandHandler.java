@@ -4,6 +4,8 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.Chat;
+import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.slf4j.Logger;
@@ -78,15 +80,23 @@ public class CommandHandler {
     }
 
     static boolean isCutCommand(String text) {
+        return "/cut".equals(normalizedCommand(text));
+    }
+
+    static boolean isStartCommand(String text) {
+        return "/start".equals(normalizedCommand(text));
+    }
+
+    private static String normalizedCommand(String text) {
         if (text == null) {
-            return false;
+            return "";
         }
         String command = text.trim().split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
         int botMention = command.indexOf('@');
         if (botMention >= 0) {
             command = command.substring(0, botMention);
         }
-        return "/cut".equals(command);
+        return command;
     }
 
     static AudioClipRange parseCutCommandRange(String text) {
@@ -190,6 +200,41 @@ public class CommandHandler {
             return caption;
         }
         return null;
+    }
+
+    private static boolean handleStartCommand(TelegramService telegram, Message message) {
+        logger.info("[{}] Received /start command from {}", now(), senderLogLine(message));
+        telegram.sendText(message.getChatId(), "Send a YouTube link and I will download it as MP3.");
+        return true;
+    }
+
+    static String senderLogLine(Message message) {
+        if (message == null) {
+            return "userId=unknown username=unknown firstName=unknown lastName=unknown chatId=unknown chatType=unknown";
+        }
+        User user = message.getFrom();
+        Chat chat = message.getChat();
+        return "userId=" + value(user == null ? null : user.getId())
+                + " username=" + username(user == null ? null : user.getUserName())
+                + " firstName=" + value(user == null ? null : user.getFirstName())
+                + " lastName=" + value(user == null ? null : user.getLastName())
+                + " chatId=" + value(message.getChatId())
+                + " chatType=" + value(chat == null ? null : chat.getType());
+    }
+
+    private static String username(String username) {
+        if (username == null || username.isBlank()) {
+            return "unknown";
+        }
+        return username.startsWith("@") ? username : "@" + username;
+    }
+
+    private static String value(Object value) {
+        if (value == null) {
+            return "unknown";
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? "unknown" : text;
     }
 
     static TelegramAudioAttachment extractAudioAttachment(Message message) {
@@ -424,6 +469,9 @@ public class CommandHandler {
             // Check for null text
             if (text == null) {
                 return false;
+            }
+            if (isStartCommand(text)) {
+                return handleStartCommand(telegram, message);
             }
             if (isCutCommand(text)) {
                 return handleCutCommand(telegram, message.getChatId(), message, text);
