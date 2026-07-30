@@ -10,7 +10,9 @@ trap '. ~/termuxserver/src/sh/kill_bots.sh; exit' INT
 
 # Log directory
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
+DISABLED_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/disabled"
 mkdir -p "$LOG_DIR"
+mkdir -p "$DISABLED_DIR"
 APP_DIR="/data/data/com.termux/files/home/termuxserver/src"
 cd "$APP_DIR" || exit 1
 
@@ -52,8 +54,12 @@ echo "Starting manager-bot watchdog..." >> "$WATCHDOG_LOG"
 nohup bash ~/termuxserver/src/sh/watchdog.sh >> "$WATCHDOG_LOG" 2>&1 &
 
 # trace-keeper (via proot-distro ubuntu for glibc/libssl3 support)
-echo "Starting trace-keeper..." >> "$TRACE_KEEPER_LOG"
-nohup bash "$TRACE_KEEPER_START" >> "$TRACE_KEEPER_LOG" 2>> "$TRACE_KEEPER_ERR" &
+if [ -f "$DISABLED_DIR/trace-keeper.disabled" ]; then
+    echo "trace-keeper is disabled by manager-bot /kill; not starting." >> "$TRACE_KEEPER_LOG"
+else
+    echo "Starting trace-keeper..." >> "$TRACE_KEEPER_LOG"
+    nohup bash "$TRACE_KEEPER_START" >> "$TRACE_KEEPER_LOG" 2>> "$TRACE_KEEPER_ERR" &
+fi
 
 # Wait for all background processes to finish
 exit 0
