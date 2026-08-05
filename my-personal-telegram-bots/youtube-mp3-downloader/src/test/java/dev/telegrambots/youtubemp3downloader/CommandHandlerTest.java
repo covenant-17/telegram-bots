@@ -180,9 +180,31 @@ class CommandHandlerTest {
     void testDetectsSanitizeMp3Commands() {
         assertTrue(CommandHandler.isSanitizeMp3Command("/sanitize_mp3"));
         assertTrue(CommandHandler.isSanitizeMp3Command("/sanitize_mp3@YoutubeMp3Bot dry"));
-        assertTrue(CommandHandler.isSanitizeMp3Command("/delete_mp3"));
+        assertFalse(CommandHandler.isSanitizeMp3Command("/delete_mp3"));
+        assertTrue(CommandHandler.isDeleteMp3Command("/delete_mp3"));
+        assertTrue(CommandHandler.isDeleteMp3Command("/delete_mp3@YoutubeMp3Bot"));
         assertFalse(CommandHandler.isSanitizeMp3Command("/start"));
+        assertFalse(CommandHandler.isDeleteMp3Command("/sanitize_mp3"));
         assertFalse(CommandHandler.isSanitizeMp3Command("https://youtu.be/dQw4w9WgXcQ"));
+    }
+
+    @Test
+    @DisplayName("Should delete MP3 files recursively in workzone")
+    void testDeleteMp3FilesInDirectory(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tempDir) throws Exception {
+        java.nio.file.Path nested = java.nio.file.Files.createDirectory(tempDir.resolve("nested"));
+        java.nio.file.Path first = java.nio.file.Files.writeString(tempDir.resolve("first.mp3"), "audio");
+        java.nio.file.Path second = java.nio.file.Files.writeString(nested.resolve("second.mp3"), "audio");
+        java.nio.file.Path untouched = java.nio.file.Files.writeString(tempDir.resolve("notes.txt"), "text");
+
+        CommandHandler.DeleteMp3Result result = CommandHandler.deleteMp3FilesInDirectory(tempDir.toFile());
+
+        assertEquals(2, result.total());
+        assertEquals(2, result.deleted());
+        assertEquals(0, result.failed());
+        assertFalse(java.nio.file.Files.exists(first));
+        assertFalse(java.nio.file.Files.exists(second));
+        assertTrue(java.nio.file.Files.exists(untouched));
+        assertTrue(CommandHandler.buildDeleteMp3Summary(result).contains("MP3 delete complete"));
     }
 
     @Test
