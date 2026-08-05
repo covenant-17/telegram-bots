@@ -122,7 +122,11 @@ public class CommandHandler {
         if (botMention >= 0) {
             command = command.substring(0, botMention);
         }
-        return "/sanitize_mp3".equals(command) || "/delete_mp3".equals(command);
+        return "/sanitize_mp3".equals(command);
+    }
+
+    static boolean isDeleteMp3Command(String text) {
+        return "/delete_mp3".equals(normalizedCommand(text));
     }
 
     static boolean isSanitizeMp3DryRun(String text) {
@@ -183,6 +187,122 @@ public class CommandHandler {
             } catch (Exception e) {
                 logger.error("[{}] MP3 sanitize command failed", now(), e);
                 telegram.sendText(chatId, "[ERROR ☢️☣️] MP3 sanitize failed: " + e.getMessage());
+            }
+        });
+        return true;
+    }
+
+    record DeleteMp3Result(
+            String directory,
+            boolean directoryMissing,
+            boolean directoryUnreadable,
+            int total,
+            int deleted,
+            int failed,
+            java.util.List<String> details
+    ) {
+    }
+
+    static DeleteMp3Result deleteMp3FilesInDirectory(java.io.File directory) {
+        if (directory == null || !directory.exists()) {
+            return new DeleteMp3Result(
+                    directory == null ? "" : directory.getAbsolutePath(),
+                    true,
+                    false,
+                    0,
+                    0,
+                    0,
+                    java.util.List.of()
+            );
+        }
+        if (!directory.isDirectory() || !directory.canRead()) {
+            return new DeleteMp3Result(directory.getAbsolutePath(), false, true, 0, 0, 0, java.util.List.of());
+        }
+
+        java.util.List<java.nio.file.Path> files = new java.util.ArrayList<>();
+        try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.walk(directory.toPath())) {
+            stream.filter(java.nio.file.Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".mp3"))
+                    .sorted()
+                    .forEach(files::add);
+        } catch (IOException e) {
+            return new DeleteMp3Result(
+                    directory.getAbsolutePath(),
+                    false,
+                    true,
+                    0,
+                    0,
+                    0,
+                    java.util.List.of("Failed to scan directory: " + e.getMessage())
+            );
+        }
+
+        int deleted = 0;
+        int failed = 0;
+        java.util.List<String> details = new java.util.ArrayList<>();
+        for (java.nio.file.Path file : files) {
+            try {
+                java.nio.file.Files.deleteIfExists(file);
+                deleted++;
+                details.add("Deleted: " + file.getFileName());
+            } catch (IOException e) {
+                failed++;
+                details.add("Failed: " + file.getFileName() + " (" + e.getMessage() + ")");
+            }
+        }
+        return new DeleteMp3Result(
+                directory.getAbsolutePath(),
+                false,
+                false,
+                files.size(),
+                deleted,
+                failed,
+                details
+        );
+    }
+
+    static String buildDeleteMp3Summary(DeleteMp3Result result) {
+        if (result.directoryMissing()) {
+            return "[ERROR ☢️☣️] MP3 workzone not found:\n" + result.directory();
+        }
+        if (result.directoryUnreadable()) {
+            return "[ERROR ☢️☣️] MP3 workzone cannot be read:\n" + result.directory();
+        }
+        if (result.total() == 0) {
+            return "[SUCCESS ✅] No .mp3 files found.\nDirectory: " + result.directory();
+        }
+
+        StringBuilder msg = new StringBuilder();
+        msg.append("[SUCCESS ✅] MP3 delete complete.\n");
+        msg.append("Directory: ").append(result.directory()).append("\n");
+        msg.append("Total found: ").append(result.total()).append("\n");
+        msg.append("Deleted: ").append(result.deleted()).append("\n");
+        msg.append("Failed: ").append(result.failed());
+        if (!result.details().isEmpty()) {
+            msg.append("\n\nDetails:\n");
+            int limit = Math.min(result.details().size(), 20);
+            for (int i = 0; i < limit; i++) {
+                msg.append("- ").append(result.details().get(i)).append("\n");
+            }
+            if (result.details().size() > limit) {
+                msg.append("...and ").append(result.details().size() - limit).append(" more");
+            }
+        }
+        return msg.toString().trim();
+    }
+
+    private static boolean handleDeleteMp3Command(TelegramService telegram, Long chatId) {
+        java.io.File workzone = Utils.getYoutubeMp3WorkzoneDir();
+        telegram.sendText(chatId, "[STARTED] Deleting MP3 files in workzone...");
+        executor.submit(() -> {
+            try {
+                DeleteMp3Result result = deleteMp3FilesInDirectory(workzone);
+                telegram.sendText(chatId, buildDeleteMp3Summary(result));
+                logger.info("[{}] MP3 delete command finished. dir={}, total={}, deleted={}, failed={}",
+                        now(), result.directory(), result.total(), result.deleted(), result.failed());
+            } catch (Exception e) {
+                logger.error("[{}] MP3 delete command failed", now(), e);
+                telegram.sendText(chatId, "[ERROR ☢️☣️] MP3 delete failed: " + e.getMessage());
             }
         });
         return true;
@@ -482,6 +602,9 @@ public class CommandHandler {
             if (isSanitizeMp3Command(text)) {
                 return handleSanitizeMp3Command(telegram, message.getChatId(), text);
             }
+            if (isDeleteMp3Command(text)) {
+                return handleDeleteMp3Command(telegram, message.getChatId());
+            }
             java.util.List<DownloadRequest> requests = DownloadRequestParser.parse(text);
             if (requests.size() > 1) {
                 long batchStart = System.currentTimeMillis();
@@ -686,6 +809,7 @@ public class CommandHandler {
                 "--audio-quality", "320k",
                 "--dump-json"
             ));
+            YtDlpService.addYoutubeMetadataExtractorArgs(metadataCommand);
             metadataCommand.addAll(commonYtDlpArgs());
             metadataCommand.add(url);
             ProcessBuilder pb = new ProcessBuilder(metadataCommand);

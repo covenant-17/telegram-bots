@@ -13,7 +13,7 @@ final class BotCommandCatalog {
                 new BotCommand("start", "Show bot greeting and log sender info"),
                 new BotCommand("cut", "Trim an attached audio file: /cut 0:00 2:50"),
                 new BotCommand("sanitize_mp3", "Preview or sanitize MP3 filenames in the workzone"),
-                new BotCommand("delete_mp3", "Sanitize MP3 filenames in the workzone")
+                new BotCommand("delete_mp3", "Delete all MP3 files in the workzone")
         );
     }
 }

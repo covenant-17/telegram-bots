@@ -50,16 +50,13 @@ public abstract class BaseBotConfig {
             }
         }
 
-        try {
-            return ResourceBundle.getBundle("config");
-        } catch (java.util.MissingResourceException e) {
-            for (Path externalConfig : fallbackConfigCandidates()) {
-                if (Files.isRegularFile(externalConfig)) {
-                    return loadExternalConfig(externalConfig);
-                }
+        for (Path externalConfig : fallbackConfigCandidates()) {
+            if (Files.isRegularFile(externalConfig)) {
+                return loadExternalConfig(externalConfig);
             }
-            throw e;
         }
+
+        return ResourceBundle.getBundle("config");
     }
 
     private static ResourceBundle loadExternalConfig(Path externalConfig) {

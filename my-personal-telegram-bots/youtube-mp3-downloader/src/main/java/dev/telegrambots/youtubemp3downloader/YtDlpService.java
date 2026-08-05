@@ -39,6 +39,22 @@ public class YtDlpService {
         return args;
     }
 
+    static void addYoutubeMetadataExtractorArgs(java.util.List<String> args) {
+        args.add("--extractor-args");
+        args.add("youtube:player_client=android");
+    }
+
+    static boolean isYtDlpDiagnosticLine(String line) {
+        if (line == null) {
+            return true;
+        }
+        String trimmed = line.trim();
+        return trimmed.isEmpty()
+                || trimmed.startsWith("WARNING:")
+                || trimmed.startsWith("ERROR:")
+                || trimmed.startsWith("[");
+    }
+
     private static String now() {
         return java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }    public boolean downloadAudio(String url, String outputPath) throws IOException, InterruptedException {
@@ -120,6 +136,7 @@ public class YtDlpService {
                 "--max-downloads", "1",
                 "--output", outputPath
         ));
+        addYoutubeMetadataExtractorArgs(cmd);
         cmd.addAll(commonArgs);
         cmd.add(url);
         return cmd;
@@ -575,6 +592,7 @@ public class YtDlpService {
                 ytDlpPath,
                 "--print", "uploader", "--print", "title"
         ));
+        addYoutubeMetadataExtractorArgs(cmd);
         cmd.addAll(commonYtDlpArgs());
         cmd.add(url);
         ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -584,11 +602,14 @@ public class YtDlpService {
         String channel = null, title = null;
         String line;
         while ((line = reader.readLine()) != null) {
-            if (channel == null && !line.trim().isEmpty() && !line.startsWith("WARNING")) {
+            if (isYtDlpDiagnosticLine(line)) {
+                continue;
+            }
+            if (channel == null) {
                 channel = line.trim();
                 continue;
             }
-            if (channel != null && title == null && !line.trim().isEmpty() && !line.startsWith("WARNING")) {
+            if (title == null) {
                 title = line.trim();
                 break;
             }

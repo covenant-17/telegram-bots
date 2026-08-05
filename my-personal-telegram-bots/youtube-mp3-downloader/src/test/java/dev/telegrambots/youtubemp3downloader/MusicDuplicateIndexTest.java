@@ -96,4 +96,5 @@ class MusicDuplicateIndexTest {
                 .count();
         assertEquals(1, indexedRows);
     }
+
 }
