@@ -53,31 +53,32 @@ mvn clean package
 Пример запуска (ssh + запуск скрипта):
 
 ```
-ssh -i "/path/to/key" user@server -p <SFTP_PORT> "bash /path/to/termuxserver/src/sh/run_bot.sh"
+ssh -i "<SSH_KEY_PATH>" <SFTP_USER>@<SFTP_HOST> -p <SFTP_PORT> "bash /path/to/termuxserver/src/sh/run_bot.sh"
 ```
 
-## Доступ к серверу (известная информация)
+## Доступ к серверу
 
-Информация взята из моих сохранённых данных для этой сессии:
+Конкретные реквизиты доступа не хранятся в репозитории. Подставляйте их из
+локальной конфигурации или переменных окружения:
 
-- Host: <SFTP_HOST>
-- Port: <SFTP_PORT>
-- User: username
-- Password: <SFTP_PASSWORD>
+- Host: `<SFTP_HOST>`
+- Port: `<SFTP_PORT>`
+- User: `<SFTP_USER>`
+- Private key: `<SSH_KEY_PATH>`
 
 Key-based пример (Windows PowerShell):
 
 ```
-ssh -i "<SSH_KEY_PATH>" -o StrictHostKeyChecking=no username@<SFTP_HOST> -p <SFTP_PORT> "command"
+ssh -i "<SSH_KEY_PATH>" -o StrictHostKeyChecking=no <SFTP_USER>@<SFTP_HOST> -p <SFTP_PORT> "command"
 ```
 
 Key-based пример (Git Bash / bash):
 
 ```
-ssh -i "<SSH_KEY_PATH>" -o StrictHostKeyChecking=no username@<SFTP_HOST> -p <SFTP_PORT> "command"
+ssh -i "<SSH_KEY_PATH>" -o StrictHostKeyChecking=no <SFTP_USER>@<SFTP_HOST> -p <SFTP_PORT> "command"
 ```
 
-> Внимание: пароли и приватные ключи — чувствительные данные. Убедитесь, что доступ к этому файлу контролируется согласно вашей политике безопасности.
+> Пароли и приватные ключи нельзя добавлять в репозиторий, даже в примеры.
 
 ## Файлы конфигурации и примеры
 

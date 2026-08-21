@@ -50,13 +50,10 @@ Tools/*
 !Tools/*.md
 
 # .vscode (push useful settings, but ignore personal)
-.vscode/sftp.json  # contains personal keys/passwords
+# Contains personal server credentials.
+.vscode/sftp.json
 
 # Additional ignores
 Any files/
 .tmp.driveupload/
 remove_bom.ps1
-my-personal-telegram-bots/converter-bot/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
-my-personal-telegram-bots/converter-bot/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
-my-personal-telegram-bots/converter-bot/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
-my-personal-telegram-bots/converter-bot/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
