@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class MainTest {
 
@@ -29,5 +30,13 @@ public class MainTest {
                 System.setProperty("bot.config.path", previousConfigPath);
             }
         }
+    }
+
+    @Test
+    void recognizesSupportedTelegramMediaRepresentations() {
+        assertEquals("clip.WEBM", ConverterBot.supportedFileName("clip.WEBM", null, null));
+        assertEquals("telegram-upload.webm", ConverterBot.supportedFileName(null, "video/webm", null));
+        assertEquals("telegram-upload.gif", ConverterBot.supportedFileName(null, "video/mp4", ".gif"));
+        assertNull(ConverterBot.supportedFileName("clip.mp4", "video/mp4", null));
     }
 }

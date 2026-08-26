@@ -26,6 +26,8 @@ import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.Video;
+import org.telegram.telegrambots.meta.api.objects.games.Animation;
 
 // Logging framework
 import org.slf4j.Logger;
@@ -71,12 +73,43 @@ public class ConverterBot extends TelegramLongPollingBot {
     try {
       if (update.hasMessage()) {
         Message message = update.getMessage();
+        logger.info(
+          "Received message from chat {}: document={}, video={}, animation={}, text={}",
+          message.getChatId(),
+          message.hasDocument(),
+          message.hasVideo(),
+          message.hasAnimation(),
+          message.hasText()
+        );
         if (message.hasText() && "/start".equals(message.getText())) {
           handleStartCommand(message);
           return;
         }
         if (message.hasDocument()) {
-          handleDocument(message);
+          Document document = message.getDocument();
+          handleFile(
+            message,
+            document.getFileId(),
+            supportedFileName(document.getFileName(), document.getMimeType(), null)
+          );
+          return;
+        }
+        if (message.hasVideo()) {
+          Video video = message.getVideo();
+          handleFile(
+            message,
+            video.getFileId(),
+            supportedFileName(video.getFileName(), video.getMimeType(), null)
+          );
+          return;
+        }
+        if (message.hasAnimation()) {
+          Animation animation = message.getAnimation();
+          handleFile(
+            message,
+            animation.getFileId(),
+            supportedFileName(animation.getFileName(), null, ".gif")
+          );
           return;
         }
       }
@@ -104,11 +137,9 @@ public class ConverterBot extends TelegramLongPollingBot {
     }
   }
 
-  private void handleDocument(Message message) {
-    Document document = message.getDocument();
-    String fileName = document.getFileName();
-    
-    if (fileName == null || (!fileName.endsWith(".webm") && !fileName.endsWith(".gif"))) {
+  private void handleFile(Message message, String fileId, String fileName) {
+    if (fileName == null) {
+      logger.info("Unsupported media received from chat {}", message.getChatId());
       sendErrorMessage(message.getChatId(), "Please send a .webm or .gif file to convert.");
       return;
     }
@@ -138,7 +169,7 @@ public class ConverterBot extends TelegramLongPollingBot {
         }
 
         // Download file
-        File file = execute(new GetFile(document.getFileId()));
+        File file = execute(new GetFile(fileId));
         java.io.File inputFile = downloadFile(file.getFilePath());
         System.out.println("[bot] Start conversion: " + inputFile.getAbsolutePath());
         
@@ -174,6 +205,24 @@ public class ConverterBot extends TelegramLongPollingBot {
         sendErrorMessage(message.getChatId(), "[ERROR ☢️☣️] An error occurred during file conversion. Please try again. ❌");
       }
     });
+  }
+
+  static String supportedFileName(String fileName, String mimeType, String fallbackExtension) {
+    if (fileName != null) {
+      String lowerCaseName = fileName.toLowerCase(java.util.Locale.ROOT);
+      if (lowerCaseName.endsWith(".webm") || lowerCaseName.endsWith(".gif")) {
+        return fileName;
+      }
+    }
+    if (mimeType != null) {
+      if ("video/webm".equalsIgnoreCase(mimeType)) {
+        return "telegram-upload.webm";
+      }
+      if ("image/gif".equalsIgnoreCase(mimeType)) {
+        return "telegram-upload.gif";
+      }
+    }
+    return fallbackExtension == null ? null : "telegram-upload" + fallbackExtension;
   }
 
   // Convert webm or gif to mp4
