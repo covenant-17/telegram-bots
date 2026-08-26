@@ -17,8 +17,8 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 
 // Telegram API Objects
 import org.telegram.telegrambots.meta.api.objects.Document;
@@ -178,17 +178,18 @@ public class ConverterBot extends TelegramLongPollingBot {
         logger.info("Conversion finished: {}", mp4File.getAbsolutePath());
         
         // Send result back
-        SendDocument sendDocument = new SendDocument();
-        sendDocument.setChatId(message.getChatId().toString());
-        sendDocument.setDocument(new InputFile(mp4File));
+        SendVideo sendVideo = new SendVideo();
+        sendVideo.setChatId(message.getChatId().toString());
+        sendVideo.setVideo(new InputFile(mp4File));
+        sendVideo.setSupportsStreaming(true);
         
         // Success message
         String doneMsg = "[SUCCESS ✅] " + getRandomText(
           "done",
           "bot_texts_done.json"
         ) + " 🎬";
-        sendDocument.setCaption(doneMsg);
-        execute(sendDocument);
+        sendVideo.setCaption(doneMsg);
+        execute(sendVideo);
         
         logger.info("MP4 sent to user: {}", message.getChatId());
         
