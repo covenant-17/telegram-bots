@@ -179,7 +179,7 @@ public class ManagerBot extends TelegramLongPollingBot {
         AppDefinition app = AppRegistry.get(appName);
         send(chatId, "🔄 Rebuilding *" + app.name + "*…");
 
-        // 1. git pull (or clone if repo not present)
+        // 1. Synchronize the deployment checkout (or clone if repo not present)
         java.io.File repoDir = new java.io.File(app.repoPath);
         if (!repoDir.exists()) {
             if (app.repoUrl == null) {
@@ -197,14 +197,13 @@ public class ManagerBot extends TelegramLongPollingBot {
             }
             send(chatId, "✅ git clone OK");
         } else {
-            send(chatId, "📥 git pull…");
-            ShellRunner.run("git reset --hard HEAD", app.repoPath);
-            ShellResult pull = ShellRunner.run("git pull", app.repoPath);
-            if (!pull.isSuccess()) {
-                send(chatId, "❌ git pull failed:\n```\n" + truncate(pull.combined(), 800) + "\n```");
+            send(chatId, "📥 Syncing repository…");
+            ShellResult sync = ShellRunner.run(repositorySyncCommand(), app.repoPath);
+            if (!sync.isSuccess()) {
+                send(chatId, "❌ Repository sync failed:\n```\n" + truncate(sync.combined(), 800) + "\n```");
                 return;
             }
-            send(chatId, "✅ git pull OK\n" + truncate(pull.stdout, 200));
+            send(chatId, "✅ Repository sync OK\n" + truncate(sync.stdout, 200));
         }
 
         // 2. Pre-build step (e.g. shared-config install)
@@ -244,6 +243,15 @@ public class ManagerBot extends TelegramLongPollingBot {
             enableAutoRestart(app);
             doRestart(chatId, app);
         }
+    }
+
+    static String repositorySyncCommand() {
+        // This is a deployment checkout: origin is canonical. Resetting to the
+        // configured upstream also recovers cleanly after a remote history rewrite.
+        // Ignored/untracked local config is intentionally preserved (no git clean).
+        return "git fetch --prune origin"
+                + " && upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}')"
+                + " && git reset --hard \"$upstream\"";
     }
 
     private void handleKill(long chatId, String arg) {
