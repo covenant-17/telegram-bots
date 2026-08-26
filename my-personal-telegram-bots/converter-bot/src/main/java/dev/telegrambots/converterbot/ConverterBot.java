@@ -184,7 +184,7 @@ public class ConverterBot extends TelegramLongPollingBot {
         sendVideo.setSupportsStreaming(true);
         
         // Success message
-        String doneMsg = "[SUCCESS ✅] " + getRandomText(
+        String doneMsg = getRandomText(
           "done",
           "bot_texts_done.json"
         ) + " 🎬";
