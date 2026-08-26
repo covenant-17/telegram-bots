@@ -65,7 +65,12 @@ public class AppRegistry {
                 LOG_BASE + "/manager-bot.log",
                 LOG_BASE + "/manager-bot-error.log",
                 "manager-bot",
-                "git@github.com:covenant-17/telegram-bots.git"
+                "git@github.com:covenant-17/telegram-bots.git",
+                "mvn clean package -B -DskipTests -q",
+                "env BOT_CONFIG_PATH=" + HOME
+                        + "/repos/telegram-bots/my-personal-telegram-bots/manager-bot/src/main/resources/config.properties"
+                        + " java -jar " + HOME
+                        + "/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
         ));
     }
 

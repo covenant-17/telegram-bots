@@ -421,8 +421,8 @@ public class ManagerBot extends TelegramLongPollingBot {
     private void doSelfRestart(long chatId, AppDefinition app) {
         long myPid = ProcessHandle.current().pid();
         // Kill old JVM by PID, wait a moment, then start new one
-        String launchCmd = "sleep 2 && kill -9 " + myPid + " 2>/dev/null; sleep 1 && nohup java -jar "
-                + app.jarPath + " >> " + app.logPath + " 2>> " + app.errLogPath + " &";
+        String launchCmd = "sleep 2 && kill -9 " + myPid + " 2>/dev/null; sleep 1 && nohup "
+                + app.startCommand + " >> " + app.logPath + " 2>> " + app.errLogPath + " &";
         ShellRunner.runDetached("bash -c '" + launchCmd + "'", "/dev/null");
         send(chatId, "♻️ *manager-bot* rebuilt. Restarting now… I'll be back in a few seconds.");
     }

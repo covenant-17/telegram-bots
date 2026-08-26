@@ -4,6 +4,7 @@
 #   nohup bash ~/termuxserver/src/sh/watchdog.sh >> ~/termuxserver/src/sh/logs/watchdog.log 2>&1 &
 
 MANAGER_JAR="/data/data/com.termux/files/home/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
+MANAGER_CONFIG="/data/data/com.termux/files/home/repos/telegram-bots/my-personal-telegram-bots/manager-bot/src/main/resources/config.properties"
 LOG_DIR="/data/data/com.termux/files/home/termuxserver/src/sh/logs"
 TRACE_START="/data/data/com.termux/files/home/termuxserver/src/sh/start-trace-keeper.sh"
 MANAGER_LOG="$LOG_DIR/manager-bot.log"
@@ -27,7 +28,7 @@ while true; do
     PIDS=$(ps aux | grep 'java -jar' | grep "manager-bot" | grep -v grep | awk '{print $2}')
     if [ -z "$PIDS" ]; then
         log "manager-bot is DOWN. Restarting..."
-        nohup java -jar "$MANAGER_JAR" >> "$MANAGER_LOG" 2>> "$MANAGER_ERR" &
+        BOT_CONFIG_PATH="$MANAGER_CONFIG" nohup java -jar "$MANAGER_JAR" >> "$MANAGER_LOG" 2>> "$MANAGER_ERR" &
         log "Started manager-bot with PID $!."
         sleep 10
     fi
