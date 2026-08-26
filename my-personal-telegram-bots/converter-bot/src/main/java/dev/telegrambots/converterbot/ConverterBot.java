@@ -87,6 +87,10 @@ public class ConverterBot extends TelegramLongPollingBot {
         }
         if (message.hasDocument()) {
           Document document = message.getDocument();
+          if (isMp4(document.getFileName(), document.getMimeType())) {
+            sendAlreadyMp4Message(message);
+            return;
+          }
           handleFile(
             message,
             document.getFileId(),
@@ -96,6 +100,10 @@ public class ConverterBot extends TelegramLongPollingBot {
         }
         if (message.hasVideo()) {
           Video video = message.getVideo();
+          if (isMp4(video.getFileName(), video.getMimeType())) {
+            sendAlreadyMp4Message(message);
+            return;
+          }
           handleFile(
             message,
             video.getFileId(),
@@ -224,6 +232,25 @@ public class ConverterBot extends TelegramLongPollingBot {
       }
     }
     return fallbackExtension == null ? null : "telegram-upload" + fallbackExtension;
+  }
+
+  static boolean isMp4(String fileName, String mimeType) {
+    if (fileName != null) {
+      return fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".mp4");
+    }
+    return "video/mp4".equalsIgnoreCase(mimeType);
+  }
+
+  private void sendAlreadyMp4Message(Message message) {
+    logger.info("MP4 received from chat {}; conversion skipped", message.getChatId());
+    try {
+      SendMessage response = new SendMessage();
+      response.setChatId(message.getChatId().toString());
+      response.setText("This file is already in MP4 format — no conversion is needed. ✅");
+      execute(response);
+    } catch (Exception e) {
+      logger.error("Error sending already-MP4 message: {}", e.getMessage(), e);
+    }
   }
 
   // Convert webm or gif to mp4

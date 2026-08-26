@@ -7,7 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MainTest {
 
@@ -38,5 +40,13 @@ public class MainTest {
         assertEquals("telegram-upload.webm", ConverterBot.supportedFileName(null, "video/webm", null));
         assertEquals("telegram-upload.gif", ConverterBot.supportedFileName(null, "video/mp4", ".gif"));
         assertNull(ConverterBot.supportedFileName("clip.mp4", "video/mp4", null));
+    }
+
+    @Test
+    void recognizesMp4ByFileNameOrMimeType() {
+        assertTrue(ConverterBot.isMp4("clip.MP4", null));
+        assertTrue(ConverterBot.isMp4(null, "video/mp4"));
+        assertFalse(ConverterBot.isMp4("clip.webm", "video/webm"));
+        assertFalse(ConverterBot.isMp4("clip.webm", "video/mp4"));
     }
 }
