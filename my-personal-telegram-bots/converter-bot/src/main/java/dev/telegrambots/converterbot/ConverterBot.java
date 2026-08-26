@@ -1,5 +1,6 @@
 package dev.telegrambots.converterbot;
 
+import dev.telegrambots.shared.BaseBotConfig;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -44,9 +45,9 @@ public class ConverterBot extends TelegramLongPollingBot {
   private final BotConfig config;
   private final ExecutorService executor = Executors.newFixedThreadPool(3);
 
-  private static String getBotTokenFromConfig() {
+  static String getBotTokenFromConfig() {
     try {
-      return java.util.ResourceBundle.getBundle("config").getString("bot.token");
+      return BaseBotConfig.loadConfig().getString("bot.token");
     } catch (Exception e) {
       throw new RuntimeException("Failed to load bot token from config", e);
     }
