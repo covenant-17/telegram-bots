@@ -49,7 +49,8 @@ public class AppDefinition {
             String repoUrl) {
         this(name, repoPath, buildSubPath, preBuildSubPath, jarPath, logPath, errLogPath,
                 processPattern, repoUrl, "mvn clean package -B -DskipTests -q",
-                "java -jar " + jarPath);
+                "env BOT_CONFIG_PATH=" + repoPath + "/" + buildSubPath
+                        + "/src/main/resources/config.properties java -jar " + jarPath);
     }
 
     public AppDefinition(

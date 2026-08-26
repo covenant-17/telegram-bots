@@ -24,6 +24,7 @@ fi
 
 # converter bot
 CONVERTER_JAR="/data/data/com.termux/files/home/termuxserver/src/converter-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"
+CONVERTER_CONFIG="/data/data/com.termux/files/home/repos/telegram-bots/my-personal-telegram-bots/converter-bot/src/main/resources/config.properties"
 CONVERTER_LOG="$LOG_DIR/converter-bot.log"
 CONVERTER_ERR="$LOG_DIR/converter-bot-error.log"
 # # rt-file-converter-bot disabled, moved to Serpstat
@@ -32,6 +33,7 @@ CONVERTER_ERR="$LOG_DIR/converter-bot-error.log"
 # FILECONVERTER_ERR="$LOG_DIR/rt-file-converter-bot-error.log"
 # youtube-mp3-downloader bot
 YOUTUBE_MP3_DOWNLOADER_JAR="/data/data/com.termux/files/home/termuxserver/src/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar"
+YOUTUBE_MP3_DOWNLOADER_CONFIG="/data/data/com.termux/files/home/repos/telegram-bots/my-personal-telegram-bots/youtube-mp3-downloader/src/main/resources/config.properties"
 YOUTUBE_MP3_DOWNLOADER_LOG="$LOG_DIR/youtube-mp3-downloader.log"
 YOUTUBE_MP3_DOWNLOADER_ERR="$LOG_DIR/youtube-mp3-downloader-error.log"
 # manager bot
@@ -44,11 +46,11 @@ TRACE_KEEPER_START="/data/data/com.termux/files/home/termuxserver/src/sh/start-t
 
 # Starting the bots
 echo "Starting converter-bot..." >> "$CONVERTER_LOG"
-java -jar "$CONVERTER_JAR" >> "$CONVERTER_LOG" 2>> "$CONVERTER_ERR" &
+BOT_CONFIG_PATH="$CONVERTER_CONFIG" java -jar "$CONVERTER_JAR" >> "$CONVERTER_LOG" 2>> "$CONVERTER_ERR" &
 # echo "Starting fileconverter..." >> "$FILECONVERTER_LOG" #disabled, moved to Serpstat
 # java -jar "$FILECONVERTER_JAR" >> "$FILECONVERTER_LOG" 2>> "$FILECONVERTER_ERR" &
 echo "Starting youtube-mp3-downloader..." >> "$YOUTUBE_MP3_DOWNLOADER_LOG"
-java -jar "$YOUTUBE_MP3_DOWNLOADER_JAR" >> "$YOUTUBE_MP3_DOWNLOADER_LOG" 2>> "$YOUTUBE_MP3_DOWNLOADER_ERR" &
+BOT_CONFIG_PATH="$YOUTUBE_MP3_DOWNLOADER_CONFIG" java -jar "$YOUTUBE_MP3_DOWNLOADER_JAR" >> "$YOUTUBE_MP3_DOWNLOADER_LOG" 2>> "$YOUTUBE_MP3_DOWNLOADER_ERR" &
 WATCHDOG_LOG="$LOG_DIR/watchdog.log"
 echo "Starting manager-bot watchdog..." >> "$WATCHDOG_LOG"
 nohup bash ~/termuxserver/src/sh/watchdog.sh >> "$WATCHDOG_LOG" 2>&1 &

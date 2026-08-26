@@ -30,4 +30,13 @@ class ManagerBotTest {
         assertTrue(command.contains("/manager-bot/src/main/resources/config.properties"));
         assertTrue(command.endsWith("java -jar /data/data/com.termux/files/home/termuxserver/src/manager-bot-1.0-SNAPSHOT-jar-with-dependencies.jar"));
     }
+
+    @Test
+    void converterStartCommandOverridesInheritedManagerConfig() {
+        String command = AppRegistry.get("converter-bot").startCommand;
+
+        assertTrue(command.startsWith("env BOT_CONFIG_PATH="));
+        assertTrue(command.contains("/converter-bot/src/main/resources/config.properties"));
+        assertFalse(command.contains("/manager-bot/src/main/resources/config.properties"));
+    }
 }
