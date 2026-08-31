@@ -39,7 +39,10 @@ public class YtDlpService {
         return args;
     }
 
-    static void addYoutubeMetadataExtractorArgs(java.util.List<String> args) {
+    static void addYoutubeMetadataExtractorArgs(java.util.List<String> args, java.util.List<String> commonArgs) {
+        if (commonArgs.contains("--cookies")) {
+            return;
+        }
         args.add("--extractor-args");
         args.add("youtube:player_client=android");
     }
@@ -136,7 +139,7 @@ public class YtDlpService {
                 "--max-downloads", "1",
                 "--output", outputPath
         ));
-        addYoutubeMetadataExtractorArgs(cmd);
+        addYoutubeMetadataExtractorArgs(cmd, commonArgs);
         cmd.addAll(commonArgs);
         cmd.add(url);
         return cmd;
@@ -592,8 +595,9 @@ public class YtDlpService {
                 ytDlpPath,
                 "--print", "uploader", "--print", "title"
         ));
-        addYoutubeMetadataExtractorArgs(cmd);
-        cmd.addAll(commonYtDlpArgs());
+        java.util.List<String> commonArgs = commonYtDlpArgs();
+        addYoutubeMetadataExtractorArgs(cmd, commonArgs);
+        cmd.addAll(commonArgs);
         cmd.add(url);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);

@@ -809,8 +809,9 @@ public class CommandHandler {
                 "--audio-quality", "320k",
                 "--dump-json"
             ));
-            YtDlpService.addYoutubeMetadataExtractorArgs(metadataCommand);
-            metadataCommand.addAll(commonYtDlpArgs());
+            java.util.List<String> commonArgs = commonYtDlpArgs();
+            YtDlpService.addYoutubeMetadataExtractorArgs(metadataCommand, commonArgs);
+            metadataCommand.addAll(commonArgs);
             metadataCommand.add(url);
             ProcessBuilder pb = new ProcessBuilder(metadataCommand);
             pb.redirectErrorStream(true);
