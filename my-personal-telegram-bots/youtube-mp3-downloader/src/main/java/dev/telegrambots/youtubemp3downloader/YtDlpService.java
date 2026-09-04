@@ -46,6 +46,8 @@ public class YtDlpService {
 
     static void addYoutubeMetadataExtractorArgs(java.util.List<String> args, java.util.List<String> commonArgs) {
         if (commonArgs.contains("--cookies")) {
+            args.add("--extractor-args");
+            args.add("youtube:player_client=default,web_embedded");
             return;
         }
         args.add("--extractor-args");

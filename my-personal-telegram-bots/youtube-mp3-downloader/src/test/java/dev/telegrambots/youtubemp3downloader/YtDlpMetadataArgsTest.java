@@ -32,7 +32,7 @@ class YtDlpMetadataArgsTest {
     }
 
     @Test
-    void doesNotAddAndroidClientForAudioDownloadsUsingCookies() {
+    void usesCookieCompatibleClientsForAudioDownloadsUsingCookies() {
         List<String> command = YtDlpService.buildDownloadAudioCommand(
                 "yt-dlp",
                 null,
@@ -42,7 +42,10 @@ class YtDlpMetadataArgsTest {
                 List.of("--ignore-config", "--cookies", "/tmp/cookies.txt")
         );
 
-        assertFalse(command.contains("--extractor-args"));
+        int extractorArgsIndex = command.indexOf("--extractor-args");
+        assertTrue(extractorArgsIndex >= 0);
+        assertEquals("youtube:player_client=default,web_embedded", command.get(extractorArgsIndex + 1));
+        assertFalse(command.contains("youtube:player_client=android"));
         assertTrue(command.contains("--ignore-config"));
         assertTrue(command.contains("--cookies"));
         assertTrue(command.indexOf("--cookies") < command.indexOf("https://www.youtube.com/watch?v=s6UbtIqOTR0"));
