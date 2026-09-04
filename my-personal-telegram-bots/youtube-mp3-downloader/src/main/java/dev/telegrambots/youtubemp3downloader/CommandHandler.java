@@ -48,14 +48,7 @@ public class CommandHandler {
     }
 
     private static java.util.List<String> commonYtDlpArgs() {
-        java.util.List<String> args = new java.util.ArrayList<>();
-        args.add("--remote-components");
-        args.add("ejs:github");
-        if (config.cookiesFilePath != null && !config.cookiesFilePath.trim().isEmpty()) {
-            args.add("--cookies");
-            args.add(config.cookiesFilePath);
-        }
-        return args;
+        return YtDlpService.buildCommonYtDlpArgs(config.cookiesFilePath);
     }
 
     static boolean isUnsafeMetadataName(String value) {

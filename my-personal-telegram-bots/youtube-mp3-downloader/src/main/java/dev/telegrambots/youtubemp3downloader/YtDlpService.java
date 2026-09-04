@@ -29,7 +29,12 @@ public class YtDlpService {
     }
 
     private java.util.List<String> commonYtDlpArgs() {
+        return buildCommonYtDlpArgs(cookiesPath);
+    }
+
+    static java.util.List<String> buildCommonYtDlpArgs(String cookiesPath) {
         java.util.List<String> args = new java.util.ArrayList<>();
+        args.add("--ignore-config");
         args.add("--remote-components");
         args.add("ejs:github");
         if (cookiesPath != null && !cookiesPath.trim().isEmpty()) {

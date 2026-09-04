@@ -12,6 +12,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class YtDlpMetadataArgsTest {
 
     @Test
+    void commonArgumentsDisableImplicitConfigAndAddConfiguredCookies() {
+        List<String> args = YtDlpService.buildCommonYtDlpArgs("/tmp/cookies.txt");
+
+        assertEquals(List.of(
+                "--ignore-config",
+                "--remote-components", "ejs:github",
+                "--cookies", "/tmp/cookies.txt"
+        ), args);
+    }
+
+    @Test
     void addsAndroidClientForMetadataRequests() {
         List<String> args = new ArrayList<>();
 
@@ -28,10 +39,11 @@ class YtDlpMetadataArgsTest {
                 "/tmp/out.mp3",
                 "https://www.youtube.com/watch?v=s6UbtIqOTR0",
                 1024L,
-                List.of("--cookies", "/tmp/cookies.txt")
+                List.of("--ignore-config", "--cookies", "/tmp/cookies.txt")
         );
 
         assertFalse(command.contains("--extractor-args"));
+        assertTrue(command.contains("--ignore-config"));
         assertTrue(command.contains("--cookies"));
         assertTrue(command.indexOf("--cookies") < command.indexOf("https://www.youtube.com/watch?v=s6UbtIqOTR0"));
     }
@@ -44,9 +56,10 @@ class YtDlpMetadataArgsTest {
                 "/tmp/out.mp3",
                 "https://www.youtube.com/watch?v=s6UbtIqOTR0",
                 1024L,
-                List.of("--remote-components", "ejs:github")
+                List.of("--ignore-config", "--remote-components", "ejs:github")
         );
 
+        assertTrue(command.contains("--ignore-config"));
         int extractorArgsIndex = command.indexOf("--extractor-args");
         assertTrue(extractorArgsIndex >= 0);
         assertEquals("youtube:player_client=android", command.get(extractorArgsIndex + 1));
