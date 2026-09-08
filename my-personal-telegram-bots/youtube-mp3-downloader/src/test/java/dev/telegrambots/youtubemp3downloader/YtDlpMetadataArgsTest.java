@@ -77,4 +77,50 @@ class YtDlpMetadataArgsTest {
         assertFalse(YtDlpService.isYtDlpDiagnosticLine("Untitled Burial"));
         assertFalse(YtDlpService.isYtDlpDiagnosticLine("Polytence - Angels in the Ocean"));
     }
+
+    @Test
+    void parsesOnlyMarkedVideoInfoWhenYtDlpPrintsMultilineWarnings() {
+        String output = """
+                WARNING: Your yt-dlp version (2026.06.09) is older than 90 days!
+                         It is strongly recommended to always use the latest version.
+                         You installed yt-dlp with pip or using the wheel from PyPi; Use that to update.
+                         To suppress this warning, add --no-update to your command/config.
+                [youtube] Extracting URL: https://www.youtube.com/watch?v=ZP-KMvYzg5s
+                __YT_DLP_CHANNEL__=The Real Channel
+                __YT_DLP_TITLE__=The Real Song
+                """;
+
+        assertEquals(
+                List.of("The Real Channel", "The Real Song"),
+                List.of(YtDlpService.parseVideoInfoOutput(output))
+        );
+    }
+
+    @Test
+    void fallsBackToSafePlaceholdersWhenMarkedVideoInfoIsMissing() {
+        String warningOnlyOutput = """
+                WARNING: Your yt-dlp version is older than 90 days!
+                         It is strongly recommended to always use the latest version.
+                         You installed yt-dlp with pip or using the wheel from PyPi; Use that to update.
+                """;
+
+        assertEquals(
+                List.of("channel", "video"),
+                List.of(YtDlpService.parseVideoInfoOutput(warningOnlyOutput))
+        );
+    }
+
+    @Test
+    void extractsJsonMetadataAfterYtDlpWarnings() {
+        String output = """
+                WARNING: Your yt-dlp version is older than 90 days!
+                         It is strongly recommended to always use the latest version.
+                {"uploader":"The Real Channel","title":"The Real Song"}
+                """;
+
+        assertEquals(
+                "{\"uploader\":\"The Real Channel\",\"title\":\"The Real Song\"}",
+                YtDlpService.extractJsonObject(output)
+        );
+    }
 }

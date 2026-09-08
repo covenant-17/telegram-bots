@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 public class YtDlpService {
+    private static final String VIDEO_INFO_CHANNEL_PREFIX = "__YT_DLP_CHANNEL__=";
+    private static final String VIDEO_INFO_TITLE_PREFIX = "__YT_DLP_TITLE__=";
     private static final Logger logger = LoggerFactory.getLogger(YtDlpService.class);
     private final String ytDlpPath;
     private final String ffmpegPath;
@@ -569,7 +571,7 @@ public class YtDlpService {
         return java.util.List.copyOf(chapters);
     }
 
-    private static String extractJsonObject(String output) {
+    static String extractJsonObject(String output) {
         if (output == null || output.isBlank()) {
             return "";
         }
@@ -600,7 +602,8 @@ public class YtDlpService {
         
         java.util.List<String> cmd = new java.util.ArrayList<>(java.util.Arrays.asList(
                 ytDlpPath,
-                "--print", "uploader", "--print", "title"
+                "--print", VIDEO_INFO_CHANNEL_PREFIX + "%(uploader)s",
+                "--print", VIDEO_INFO_TITLE_PREFIX + "%(title)s"
         ));
         java.util.List<String> commonArgs = commonYtDlpArgs();
         addYoutubeMetadataExtractorArgs(cmd, commonArgs);
@@ -610,23 +613,32 @@ public class YtDlpService {
         pb.redirectErrorStream(true);
         Process process = pb.start();
         java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
-        String channel = null, title = null;
+        StringBuilder output = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
-            if (isYtDlpDiagnosticLine(line)) {
-                continue;
-            }
-            if (channel == null) {
-                channel = line.trim();
-                continue;
-            }
-            if (title == null) {
-                title = line.trim();
-                break;
-            }
+            output.append(line).append('\n');
         }
         process.waitFor();
-        return new String[]{channel != null ? channel : "channel", title != null ? title : "video"};
+        return parseVideoInfoOutput(output.toString());
+    }
+
+    static String[] parseVideoInfoOutput(String output) {
+        String channel = null;
+        String title = null;
+        if (output != null) {
+            for (String line : output.split("\\R")) {
+                String trimmed = line.trim();
+                if (trimmed.startsWith(VIDEO_INFO_CHANNEL_PREFIX)) {
+                    channel = trimmed.substring(VIDEO_INFO_CHANNEL_PREFIX.length()).trim();
+                } else if (trimmed.startsWith(VIDEO_INFO_TITLE_PREFIX)) {
+                    title = trimmed.substring(VIDEO_INFO_TITLE_PREFIX.length()).trim();
+                }
+            }
+        }
+        return new String[]{
+                channel != null && !channel.isBlank() ? channel : "channel",
+                title != null && !title.isBlank() ? title : "video"
+        };
     }    /**
      * Check video file size and duration before downloading to avoid wasting time on large videos
      * @param url YouTube video URL

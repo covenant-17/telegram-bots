@@ -818,21 +818,18 @@ public class CommandHandler {
                 }
             }
             proc.waitFor();
-            String json = jsonBuilder.toString();
-            logger.debug("[{}] yt-dlp output: {}", now(), json);
+            String output = jsonBuilder.toString();
+            String json = YtDlpService.extractJsonObject(output);
+            logger.debug("[{}] yt-dlp output: {}", now(), output);
 
             if (!json.isBlank()) {
-                if (json.trim().startsWith("{")) {
-                    // JSON response received, continue processing
-                    logger.info("[{}] Valid JSON metadata received for URL: {}", now(), url);
-                } else {
-                    logger.warn("[{}] Non-JSON response received. Attempting fallback processing.", now());
-                    telegram.sendText(Long.valueOf(chatId), "[WARNING ⚠️] Metadata could not be parsed, but we will attempt to process the audio.");
-                    telegram.sendChatAction(chatIdLong, ActionType.UPLOADDOCUMENT); // Continue showing loader
-                    // Continue processing without metadata
-                }
+                logger.info("[{}] Valid JSON metadata received for URL: {}", now(), url);
+            } else if (!output.isBlank()) {
+                logger.warn("[{}] Non-JSON response received. Attempting fallback processing.", now());
+                telegram.sendText(Long.valueOf(chatId), "[WARNING ⚠️] Metadata could not be parsed, but we will attempt to process the audio.");
+                telegram.sendChatAction(chatIdLong, ActionType.UPLOADDOCUMENT);
             } else {
-                logger.warn("[{}] Empty JSON response for URL: {} | yt-dlp output: {}", now(), url, json);
+                logger.warn("[{}] Empty JSON response for URL: {} | yt-dlp output: {}", now(), url, output);
                 telegram.sendText(Long.valueOf(chatId), "[ERROR ☢️☣️] No metadata received. Try another video.");
                 return false;
             }
