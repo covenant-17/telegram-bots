@@ -8,6 +8,7 @@ class FileNameSanitizerTest {
     void testSanitizeRemovesGarbage() {
         assertEquals("Zillakami Lemon Juice", FileNameSanitizer.sanitize("ZillaKami - LEMON JUICE (Official Audio) (z2.fm) [320 kbps] #039;.mp3"));
         assertEquals("Lemon Juice", FileNameSanitizer.sanitize("LEMON JUICE (Official Audio)"));
+        assertEquals("Artist Song Title", FileNameSanitizer.sanitize("Artist - Song Title (official visual)"));
         assertEquals("Artist Song Title", FileNameSanitizer.sanitize("Artist - Song Title (Official Music Video)"));
         assertEquals("Track 01", FileNameSanitizer.sanitize("Track 01 (lyric video)"));
         assertEquals("Hello World", FileNameSanitizer.sanitize("Hello & World #039;"));

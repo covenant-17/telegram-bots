@@ -22,7 +22,7 @@ public class FileNameSanitizer {
     private static final Map<Pattern, String> rules = new LinkedHashMap<>();
     static {
         rules.put(Pattern.compile("\\(z2.fm\\)", Pattern.CASE_INSENSITIVE), "");
-        rules.put(Pattern.compile("\\(official (video|audio)\\)", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("\\(official (video|audio|visual)\\)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\(320 kbps\\)", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("#039;"), "'");
         rules.put(Pattern.compile("&"), " ");
