@@ -31,13 +31,16 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("\""), "");
         rules.put(Pattern.compile("_+"), " ");
         rules.put(Pattern.compile("[\\u2013\\u2014]"), " ");
-        rules.put(Pattern.compile("^\\s*untitled\\s+burial\\s*-\\s*", Pattern.CASE_INSENSITIVE), "");
-        rules.put(Pattern.compile("^\\s*aim\\s+to\\s+head\\s+release\\s+", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*untitled\\s+burial(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*alt\\s+goth\\s+nation(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*aim\\s+to\\s+head\\s+release(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("^\\s*amor\\s+fati\\s+", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("^\\s*lenaobscura\\s*-\\s*", Pattern.CASE_INSENSITIVE), "");
-        rules.put(Pattern.compile("^\\s*nedostupnost[ьb]?\\s+", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
+        rules.put(Pattern.compile("^\\s*nedostupnost[ьb]?(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
         rules.put(Pattern.compile("^\\s*rhino\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("^\\s*surveillance\\s+state\\s+records\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("^\\s*cypress\\s+čempr3s(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
+        rules.put(Pattern.compile("^\\s*dez∆riø(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
         rules.put(Pattern.compile("-{2,}"), " ");
         rules.put(Pattern.compile("-"), " ");
         rules.put(Pattern.compile("([\\[].+[\\]])"), "");
@@ -85,6 +88,7 @@ public class FileNameSanitizer {
         // Special characters and symbols that need cleaning
         rules.put(Pattern.compile("\\*"), "");
         rules.put(Pattern.compile("\\?"), " ");
+        rules.put(Pattern.compile(":"), " ");
         rules.put(Pattern.compile("\\\\"), " ");
         rules.put(Pattern.compile("\\|"), " ");
         rules.put(Pattern.compile("!+"), "");

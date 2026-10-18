@@ -55,12 +55,26 @@ public class CommandHandler {
         if (value == null || value.isBlank()) {
             return true;
         }
+        return isUrlLikeMetadataName(value) || value.matches(".*[\\/\\:*?\"<>|].*");
+    }
+
+    private static boolean isUrlLikeMetadataName(String value) {
         String normalized = value.trim().toLowerCase(Locale.ROOT);
-        return normalized.contains("http://")
+        return normalized.equals("http")
+                || normalized.equals("https")
+                || normalized.contains("http://")
                 || normalized.contains("https://")
                 || normalized.contains("youtube.com")
-                || normalized.contains("youtu.be")
-                || value.matches(".*[=\\/\\:*?\"<>|].*");
+                || normalized.contains("youtu.be");
+    }
+
+    static String sanitizeMetadataName(String rawValue) {
+        // Check before sanitizing: the // cleanup rule can reduce a URL to just "Https".
+        if (rawValue == null || isUrlLikeMetadataName(rawValue)) {
+            return null;
+        }
+        String sanitized = FileNameSanitizer.sanitize(rawValue);
+        return isUnsafeMetadataName(sanitized) ? null : sanitized;
     }
 
     static String fallbackBaseFileName(String url) {
@@ -854,8 +868,8 @@ public class CommandHandler {
             // 1. Get info via yt-dlp
             String[] ytDlpInfo = ytDlpService.getVideoInfo(url);
             logger.info("[{}] [yt-dlp-info] RAW channel: {} | RAW title: {}", now(), ytDlpInfo[0], ytDlpInfo[1]);
-            String sanitizedChannel = FileNameSanitizer.sanitize(ytDlpInfo[0]);
-            String sanitizedTitle = FileNameSanitizer.sanitize(ytDlpInfo[1]);
+            String sanitizedChannel = sanitizeMetadataName(ytDlpInfo[0]);
+            String sanitizedTitle = sanitizeMetadataName(ytDlpInfo[1]);
             logger.info("[{}] [yt-dlp-info] SANITIZED channel: {} | SANITIZED title: {}", now(), sanitizedChannel, sanitizedTitle);
 
             // 2. Check if fallback via curl is needed
@@ -863,13 +877,13 @@ public class CommandHandler {
             boolean unsafeMetadataFallbackUsed = false;
             String ytTitleRaw = null;
             String ytAuthorRaw = null;
-            if (isUnsafeMetadataName(sanitizedChannel) || isUnsafeMetadataName(sanitizedTitle)) {
+            if (isUnsafeMetadataName(sanitizedTitle)) {
                 String[] curlInfo = extractTitleAuthorFromCurl(url);
                 ytTitleRaw = curlInfo[0];
                 ytAuthorRaw = curlInfo[1];
                 if (ytTitleRaw != null && !ytTitleRaw.isBlank()) {
-                    String fallbackTitle = FileNameSanitizer.sanitize(ytTitleRaw);
-                    String fallbackChannel = FileNameSanitizer.sanitize(ytAuthorRaw);
+                    String fallbackTitle = sanitizeMetadataName(ytTitleRaw);
+                    String fallbackChannel = sanitizeMetadataName(ytAuthorRaw);
                     if (!isUnsafeMetadataName(fallbackTitle)) {
                         sanitizedTitle = fallbackTitle;
                         sanitizedChannel = isUnsafeMetadataName(fallbackChannel) ? null : fallbackChannel;

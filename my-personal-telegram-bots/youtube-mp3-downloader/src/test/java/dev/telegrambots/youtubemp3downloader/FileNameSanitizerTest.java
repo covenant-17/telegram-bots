@@ -8,10 +8,62 @@ class FileNameSanitizerTest {
     void testSanitizeRemovesGarbage() {
         assertEquals("Zillakami Lemon Juice", FileNameSanitizer.sanitize("ZillaKami - LEMON JUICE (Official Audio) (z2.fm) [320 kbps] #039;.mp3"));
         assertEquals("Lemon Juice", FileNameSanitizer.sanitize("LEMON JUICE (Official Audio)"));
+        assertEquals("Kælan Mikla Nornalagið", FileNameSanitizer.sanitize("KÆLAN MIKLA: Nornalagið"));
         assertEquals("Artist Song Title", FileNameSanitizer.sanitize("Artist - Song Title (official visual)"));
         assertEquals("Artist Song Title", FileNameSanitizer.sanitize("Artist - Song Title (Official Music Video)"));
         assertEquals("Track 01", FileNameSanitizer.sanitize("Track 01 (lyric video)"));
         assertEquals("Hello World", FileNameSanitizer.sanitize("Hello & World #039;"));
+    }
+
+    @Test
+    void testSanitizeRemovesCypressAndDezarioChannelPrefixes() {
+        for (String channel : new String[] { "Cypress Čempr3s", "CYPRESS ČEMPR3S", "Dez∆riø", "DEZ∆RIØ" }) {
+            assertEquals("Artist Track", FileNameSanitizer.sanitize(channel + " - Artist Track.mp3"));
+            assertEquals("Artist Track", FileNameSanitizer.sanitize(channel + " Artist Track.mp3"));
+            assertEquals("", FileNameSanitizer.sanitize(channel));
+        }
+        assertEquals("Artist Cypress Čempr3s", FileNameSanitizer.sanitize("Artist Cypress Čempr3s.mp3"));
+        assertEquals("Artist Dez∆riø", FileNameSanitizer.sanitize("Artist Dez∆riø.mp3"));
+        assertEquals("Dez∆riøextra Track", FileNameSanitizer.sanitize("Dez∆riøextra Track.mp3"));
+    }
+
+    @Test
+    void testSanitizeRemovesNedostupnostChannelPrefix() {
+        for (String channel : new String[] { "Nedostupnostь", "NEDOSTUPNOSTЬ", "Nedostupnostb", "Nedostupnost" }) {
+            assertEquals("", FileNameSanitizer.sanitize(channel));
+            assertEquals("Chernoburkv Циклон", FileNameSanitizer.sanitize(channel + " Chernoburkv Циклон.mp3"));
+            assertEquals("Chernoburkv Циклон", FileNameSanitizer.sanitize(channel + "-Chernoburkv Циклон.mp3"));
+        }
+        assertEquals("Nedostupnostьextra Track", FileNameSanitizer.sanitize("Nedostupnostьextra Track.mp3"));
+    }
+
+    @Test
+    void testSanitizeRemovesUntitledBurialChannelPrefix() {
+        assertEquals("", FileNameSanitizer.sanitize("Untitled Burial"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("UNTITLED BURIAL Artist Track.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Untitled Burial-Artist Track.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Untitled Burial - Artist Track.mp3"));
+        assertEquals("Untitled Burialextra Track", FileNameSanitizer.sanitize("Untitled Burialextra Track.mp3"));
+    }
+
+    @Test
+    void testSanitizeRemovesAltGothNationChannelPrefix() {
+        assertEquals("", FileNameSanitizer.sanitize("Alt Goth Nation"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("ALT GOTH NATION Artist Track.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Alt Goth Nation-Artist Track.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Alt Goth Nation - Artist Track.mp3"));
+        assertEquals("Alt Goth Nationextra Track", FileNameSanitizer.sanitize("Alt Goth Nationextra Track.mp3"));
+        assertEquals("Artist Alt Goth Nation", FileNameSanitizer.sanitize("Artist Alt Goth Nation.mp3"));
+    }
+
+    @Test
+    void testSanitizeRemovesAimToHeadReleaseChannelPrefix() {
+        assertEquals("", FileNameSanitizer.sanitize("Aim To Head Release"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("AIM TO HEAD RELEASE Artist Track.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Aim To Head Release-Artist Track.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Aim To Head Release - Artist Track.mp3"));
+        assertEquals("Aim To Head Releaseextra Track", FileNameSanitizer.sanitize("Aim To Head Releaseextra Track.mp3"));
+        assertEquals("Artist Aim To Head Release", FileNameSanitizer.sanitize("Artist Aim To Head Release.mp3"));
     }
 
     @Test

@@ -154,8 +154,40 @@ class CommandHandlerTest {
     void testRejectsUrlLikeMetadataNames() {
         assertTrue(CommandHandler.isUnsafeMetadataName("https://www.youtube.com/watch?v=4DVdqY5KwXw"));
         assertTrue(CommandHandler.isUnsafeMetadataName("Https:"));
+        assertTrue(CommandHandler.isUnsafeMetadataName("Https"));
         assertTrue(CommandHandler.isUnsafeMetadataName("www.youtube.com watch v 4DVdqY5KwXw"));
         assertFalse(CommandHandler.isUnsafeMetadataName("Билборды Стертые Слова"));
+        assertFalse(CommandHandler.isUnsafeMetadataName(
+                FileNameSanitizer.sanitize("KÆLAN MIKLA: Nornalagið")));
+    }
+
+    @Test
+    @DisplayName("Should reject URL metadata before sanitizer removes its identifying characters")
+    void testSanitizeMetadataRejectsUrls() {
+        String url = "https://www.youtube.com/watch?v=4y59Mbqu77k";
+        assertEquals("Https", FileNameSanitizer.sanitize(url));
+        assertNull(CommandHandler.sanitizeMetadataName(url));
+        assertNull(CommandHandler.sanitizeMetadataName("https://youtu.be/4y59Mbqu77k"));
+        assertNull(CommandHandler.sanitizeMetadataName("Https"));
+        assertNull(CommandHandler.sanitizeMetadataName(null));
+        assertNull(CommandHandler.sanitizeMetadataName("   "));
+    }
+
+    @Test
+    @DisplayName("Should retain a real title containing equals and normalize punctuation")
+    void testSanitizeMetadataPreservesRealTitles() {
+        assertFalse(CommandHandler.isUnsafeMetadataName("1+1=ТРИ"));
+        String title = CommandHandler.sanitizeMetadataName("1+1=ТРИ");
+        assertEquals("1+1=три", title);
+        assertEquals("Структура Щастя - 1+1=три", FileNameSanitizer.composeFileName(
+                CommandHandler.sanitizeMetadataName("СТРУКТУРА ЩАСТЯ"), title));
+        assertEquals("Kælan Mikla Nornalagið",
+                CommandHandler.sanitizeMetadataName("KÆLAN MIKLA: Nornalagið"));
+        assertNull(CommandHandler.sanitizeMetadataName("Cypress Čempr3s"));
+        assertEquals(title, FileNameSanitizer.composeFileName(
+                CommandHandler.sanitizeMetadataName("Cypress Čempr3s"), title));
+        assertEquals(title, FileNameSanitizer.composeFileName(
+                CommandHandler.sanitizeMetadataName("https://www.youtube.com/channel/example"), title));
     }
 
     @Test
