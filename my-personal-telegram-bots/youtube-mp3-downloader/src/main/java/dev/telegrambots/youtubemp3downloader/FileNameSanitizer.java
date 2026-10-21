@@ -41,6 +41,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("^\\s*surveillance\\s+state\\s+records\\s*-?\\s*", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("^\\s*cypress\\s+čempr3s(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
         rules.put(Pattern.compile("^\\s*dez∆riø(?=\\s|-|$)\\s*-?\\s*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), "");
+        rules.put(Pattern.compile("\\bai-cover\\b", Pattern.CASE_INSENSITIVE), " ");
         rules.put(Pattern.compile("-{2,}"), " ");
         rules.put(Pattern.compile("-"), " ");
         rules.put(Pattern.compile("([\\[].+[\\]])"), "");

@@ -16,6 +16,15 @@ class FileNameSanitizerTest {
     }
 
     @Test
+    void testSanitizeRemovesAiCoverTag() {
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Artist - Track AI-cover.mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Artist - Track (AI-COVER).mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Artist AI-cover Track.mp3"));
+        assertEquals("Artist Cover", FileNameSanitizer.sanitize("Artist Cover.mp3"));
+        assertEquals("Artist Thai Cover", FileNameSanitizer.sanitize("Artist Thai-cover.mp3"));
+    }
+
+    @Test
     void testSanitizeRemovesCypressAndDezarioChannelPrefixes() {
         for (String channel : new String[] { "Cypress Čempr3s", "CYPRESS ČEMPR3S", "Dez∆riø", "DEZ∆RIØ" }) {
             assertEquals("Artist Track", FileNameSanitizer.sanitize(channel + " - Artist Track.mp3"));
