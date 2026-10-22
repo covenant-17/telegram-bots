@@ -17,18 +17,19 @@ class YtDlpMetadataArgsTest {
 
         assertEquals(List.of(
                 "--ignore-config",
+                "--js-runtimes", "node",
                 "--remote-components", "ejs:github",
                 "--cookies", "/tmp/cookies.txt"
         ), args);
     }
 
     @Test
-    void addsAndroidClientForMetadataRequests() {
+    void usesDefaultClientsForMetadataRequestsWithoutCookies() {
         List<String> args = new ArrayList<>();
 
         YtDlpService.addYoutubeMetadataExtractorArgs(args, List.of("--remote-components", "ejs:github"));
 
-        assertEquals(List.of("--extractor-args", "youtube:player_client=android"), args);
+        assertEquals(List.of("--extractor-args", "youtube:player_client=default"), args);
     }
 
     @Test
@@ -52,7 +53,7 @@ class YtDlpMetadataArgsTest {
     }
 
     @Test
-    void addsAndroidClientForAudioDownloadsWithoutCookies() {
+    void usesDefaultClientsForAudioDownloadsWithoutCookies() {
         List<String> command = YtDlpService.buildDownloadAudioCommand(
                 "yt-dlp",
                 null,
@@ -65,7 +66,7 @@ class YtDlpMetadataArgsTest {
         assertTrue(command.contains("--ignore-config"));
         int extractorArgsIndex = command.indexOf("--extractor-args");
         assertTrue(extractorArgsIndex >= 0);
-        assertEquals("youtube:player_client=android", command.get(extractorArgsIndex + 1));
+        assertEquals("youtube:player_client=default", command.get(extractorArgsIndex + 1));
     }
 
     @Test

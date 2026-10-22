@@ -37,6 +37,8 @@ public class YtDlpService {
     static java.util.List<String> buildCommonYtDlpArgs(String cookiesPath) {
         java.util.List<String> args = new java.util.ArrayList<>();
         args.add("--ignore-config");
+        args.add("--js-runtimes");
+        args.add("node");
         args.add("--remote-components");
         args.add("ejs:github");
         if (cookiesPath != null && !cookiesPath.trim().isEmpty()) {
@@ -53,7 +55,7 @@ public class YtDlpService {
             return;
         }
         args.add("--extractor-args");
-        args.add("youtube:player_client=android");
+        args.add("youtube:player_client=default");
     }
 
     static boolean isYtDlpDiagnosticLine(String line) {
