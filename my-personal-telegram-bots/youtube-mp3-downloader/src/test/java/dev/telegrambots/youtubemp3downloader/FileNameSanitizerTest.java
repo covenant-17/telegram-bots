@@ -16,6 +16,18 @@ class FileNameSanitizerTest {
     }
 
     @Test
+    void testSanitizeRemovesNewDarkwaveSingleTag() {
+        assertEquals("Nnhmn Cold Like Steel",
+                FileNameSanitizer.sanitize("NNHMN - Cold like Steel (Official Audio) new darkwave single"));
+        assertEquals("Nnhmn Cold Like Steel",
+                FileNameSanitizer.sanitize("NNHMN - Cold like Steel (NEW   DARKWAVE SINGLE).mp3"));
+        assertEquals("Artist Track", FileNameSanitizer.sanitize("Artist new darkwave single Track.mp3"));
+        assertEquals("Artist Renew Single", FileNameSanitizer.sanitize("Artist renew darkwave single.mp3"));
+        assertEquals("Artist New Singles", FileNameSanitizer.sanitize("Artist new darkwave singles.mp3"));
+        assertEquals("Artist New Single", FileNameSanitizer.sanitize("Artist New Single.mp3"));
+    }
+
+    @Test
     void testSanitizeRemovesAiCoverTag() {
         assertEquals("Artist Track", FileNameSanitizer.sanitize("Artist - Track AI-cover.mp3"));
         assertEquals("Artist Track", FileNameSanitizer.sanitize("Artist - Track (AI-COVER).mp3"));

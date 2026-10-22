@@ -62,6 +62,7 @@ public class FileNameSanitizer {
         rules.put(Pattern.compile("2026", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("премьера", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("песни", Pattern.CASE_INSENSITIVE), "");
+        rules.put(Pattern.compile("\\bnew\\s+darkwave\\s+single\\b", Pattern.CASE_INSENSITIVE), " ");
         rules.put(Pattern.compile("\\bcover\\s+darkwave\\s+post\\s+punk\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\bcinematic\\s+darkwave\\s+noir\\s+postpunk\\b", Pattern.CASE_INSENSITIVE), "");
         rules.put(Pattern.compile("\\bdarkwave\\s+post\\s+punk\\b", Pattern.CASE_INSENSITIVE), "");
