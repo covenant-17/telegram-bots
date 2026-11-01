@@ -56,21 +56,6 @@ public class AppRegistry {
                 "bash " + SH_BASE + "/start-trace-keeper.sh"
         ));
 
-        APPS.put("sharex-server", new AppDefinition(
-                "sharex-server",
-                HOME + "/repos/sharex-server",
-                "",
-                null,
-                HOME + "/termuxserver/src/sharex-server.jar",
-                LOG_BASE + "/sharex-server.log",
-                LOG_BASE + "/sharex-server-error.log",
-                "sharex-server.jar",
-                "git@github.com:covenant-17/sharex-server.git",
-                "mvn clean verify -B -q",
-                "env SHAREX_CONFIG_PATH=" + HOME + "/sharex-server/config.properties"
-                        + " java -jar " + HOME + "/termuxserver/src/sharex-server.jar"
-        ));
-
         APPS.put("manager-bot", new AppDefinition(
                 "manager-bot",
                 HOME + "/repos/telegram-bots",
