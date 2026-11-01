@@ -9,6 +9,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ManagerBotTest {
 
     @Test
+    void sharexUsesStandaloneRepositoryAndPersistentConfig() {
+        AppDefinition app = AppRegistry.get("sharex-server");
+        assertTrue(AppRegistry.exists("sharex-server"));
+        assertEquals("", app.buildSubPath);
+        assertEquals("git@github.com:covenant-17/sharex-server.git", app.repoUrl);
+        assertEquals("mvn clean verify -B -q", app.buildCommand);
+        assertTrue(app.startCommand.contains("SHAREX_CONFIG_PATH="));
+        assertTrue(app.startCommand.contains("/sharex-server/config.properties"));
+        assertTrue(app.startCommand.endsWith("java -jar " + app.jarPath));
+        assertFalse(app.startCommand.contains("BOT_CONFIG_PATH"));
+    }
+
+    @Test
     void repositorySyncUsesCanonicalUpstreamWithoutDeletingLocalConfig() {
         String command = ManagerBot.repositorySyncCommand();
 
