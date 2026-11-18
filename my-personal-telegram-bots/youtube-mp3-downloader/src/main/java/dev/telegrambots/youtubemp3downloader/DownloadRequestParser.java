@@ -47,7 +47,11 @@ public final class DownloadRequestParser {
         }
     }
 
-    private static AudioClipRange parseRange(String tail) {
+    static boolean isYoutubeVideoUrl(String url) {
+        return URL_PATTERN.matcher(url).matches();
+    }
+
+    static AudioClipRange parseRange(String tail) {
         Matcher matcher = RANGE_PATTERN.matcher(tail);
         if (!matcher.matches()) {
             return null;

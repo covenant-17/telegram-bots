@@ -36,7 +36,7 @@ public class CommandHandler {
     private static final String CHAPTER_DOWNLOAD_CALLBACK_PREFIX = "chapdl:";
     private static final long PENDING_DOWNLOAD_TTL_MILLIS = 24L * 60L * 60L * 1000L;
     private static final java.util.regex.Pattern CUT_COMMAND_PATTERN = java.util.regex.Pattern.compile(
-            "^\\s*/cut(?:@\\w+)?\\s+(\\d+(?::\\d{1,2}){0,2}(?:\\.\\d+)?)\\s+(\\d+(?::\\d{1,2}){0,2}(?:\\.\\d+)?)\\s*$",
+            "^\\s*/cut(?:@\\w+)?(?:\\s+(\\S+))?(\\s+\\S+\\s+\\S+)\\s*$",
             java.util.regex.Pattern.CASE_INSENSITIVE
     );
 
@@ -106,18 +106,17 @@ public class CommandHandler {
         return command;
     }
 
-    static AudioClipRange parseCutCommandRange(String text) {
+    static CutCommand parseCutCommand(String text) {
         java.util.regex.Matcher matcher = CUT_COMMAND_PATTERN.matcher(text == null ? "" : text);
         if (!matcher.matches()) {
             return null;
         }
-        try {
-            double start = AudioClipRange.parseTimeSeconds(matcher.group(1));
-            double end = AudioClipRange.parseTimeSeconds(matcher.group(2));
-            return new AudioClipRange(start, end);
-        } catch (IllegalArgumentException e) {
+        String url = matcher.group(1);
+        if (url != null && !DownloadRequestParser.isYoutubeVideoUrl(url)) {
             return null;
         }
+        AudioClipRange range = DownloadRequestParser.parseRange(matcher.group(2));
+        return range == null ? null : new CutCommand(url, range);
     }
 
     static boolean isSanitizeMp3Command(String text) {
@@ -409,10 +408,14 @@ public class CommandHandler {
     }
 
     private static boolean handleCutCommand(TelegramService telegram, Long chatId, Message message, String text) {
-        AudioClipRange range = parseCutCommandRange(text);
-        if (range == null) {
-            telegram.sendText(chatId, "[ERROR ☢️☣️] Usage: /cut 0:00 2:50 with an attached audio file.");
+        CutCommand command = parseCutCommand(text);
+        if (command == null) {
+            telegram.sendText(chatId, "[ERROR ☢️☣️] Use /cut 0:00 2:50 with an attached audio file or /cut <YouTube URL> 0:00 2:50.");
             return true;
+        }
+        AudioClipRange range = command.range();
+        if (command.url() != null) {
+            return handleSingleDownload(telegram, chatId, new DownloadRequest(command.url(), range));
         }
         TelegramAudioAttachment attachment = extractAudioAttachment(message);
         if (attachment == null || attachment.fileId() == null || attachment.fileId().isBlank()) {
@@ -677,20 +680,24 @@ public class CommandHandler {
                 }).start();
                 return true;
             } else if (requests.size() == 1) {
-                telegram.sendText(message.getChatId(), "[SUCCESS ✅] Link accepted! 🎬 Starting processing...");
-                telegram.sendChatAction(message.getChatId(), ActionType.UPLOADDOCUMENT);
-                executor.submit(() -> {
-                    java.util.List<String> metadataFallbackDetails = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
-                    processRequestWithPreflight(telegram, message.getChatId(), requests.get(0), 1, 1, new AtomicInteger(0), metadataFallbackDetails);
-                    sendMetadataFallbackWarningIfAny(telegram, message.getChatId(), metadataFallbackDetails);
-                });
-                return true;
+                return handleSingleDownload(telegram, message.getChatId(), requests.get(0));
             } else {
                 telegram.sendText(message.getChatId(), "[ERROR ☢️☣️] Please send a valid YouTube video link. 🚫");
                 return false;
             }
         }
         return false;
+    }
+
+    private static boolean handleSingleDownload(TelegramService telegram, Long chatId, DownloadRequest request) {
+        telegram.sendText(chatId, "[SUCCESS ✅] Link accepted! 🎬 Starting processing...");
+        telegram.sendChatAction(chatId, ActionType.UPLOADDOCUMENT);
+        executor.submit(() -> {
+            java.util.List<String> metadataFallbackDetails = new java.util.ArrayList<>();
+            processRequestWithPreflight(telegram, chatId, request, 1, 1, new AtomicInteger(0), metadataFallbackDetails);
+            sendMetadataFallbackWarningIfAny(telegram, chatId, metadataFallbackDetails);
+        });
+        return true;
     }
 
     private static boolean handleCallback(TelegramService telegram, CallbackQuery callbackQuery) {
@@ -1383,6 +1390,9 @@ public class CommandHandler {
         private boolean isExpired() {
             return System.currentTimeMillis() - createdAtMillis > PENDING_DOWNLOAD_TTL_MILLIS;
         }
+    }
+
+    record CutCommand(String url, AudioClipRange range) {
     }
 
     record TelegramAudioAttachment(String fileId, String fileName, String thumbnailFileId) {

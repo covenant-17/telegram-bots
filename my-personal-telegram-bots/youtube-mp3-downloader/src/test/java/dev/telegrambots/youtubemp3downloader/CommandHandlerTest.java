@@ -275,9 +275,11 @@ class CommandHandlerTest {
     @Test
     @DisplayName("Should parse cut command range")
     void testParseCutCommandRange() {
-        AudioClipRange range = CommandHandler.parseCutCommandRange("/cut 0:00 2:50");
+        CommandHandler.CutCommand command = CommandHandler.parseCutCommand("/cut 0:00 2:50");
 
-        assertNotNull(range);
+        assertNotNull(command);
+        assertNull(command.url());
+        AudioClipRange range = command.range();
         assertEquals(0.0, range.startSeconds());
         assertEquals(170.0, range.endSeconds());
         assertEquals("0:00 - 2:50", range.formatLabel());
@@ -285,11 +287,30 @@ class CommandHandlerTest {
     }
 
     @Test
+    @DisplayName("Should parse cut commands with a YouTube link")
+    void testParseYoutubeCutCommand() {
+        String url = "https://www.youtube.com/watch?v=xBTCs-QaUUY";
+        CommandHandler.CutCommand command = CommandHandler.parseCutCommand("/cut " + url + " 0:07 3:41");
+
+        assertNotNull(command);
+        assertEquals(url, command.url());
+        assertEquals(new AudioClipRange(7, 221), command.range());
+        assertEquals(
+                new CommandHandler.CutCommand("https://youtu.be/xBTCs-QaUUY?si=test", new AudioClipRange(7.5, 221)),
+                CommandHandler.parseCutCommand("/cut@YoutubeMp3Bot https://youtu.be/xBTCs-QaUUY?si=test 0:07.5 3:41")
+        );
+    }
+
+    @Test
     @DisplayName("Should reject invalid cut command range")
     void testRejectsInvalidCutCommandRange() {
-        assertNull(CommandHandler.parseCutCommandRange("/cut 2:50 0:00"));
-        assertNull(CommandHandler.parseCutCommandRange("/cut nope 2:50"));
-        assertNull(CommandHandler.parseCutCommandRange("/start 0:00 2:50"));
+        assertNull(CommandHandler.parseCutCommand("/cut 2:50 0:00"));
+        assertNull(CommandHandler.parseCutCommand("/cut nope 2:50"));
+        assertNull(CommandHandler.parseCutCommand("/start 0:00 2:50"));
+        assertNull(CommandHandler.parseCutCommand("/cut https://youtu.be/xBTCs-QaUUY 3:41 0:07"));
+        assertNull(CommandHandler.parseCutCommand("/cut https://youtu.be/xBTCs-QaUUY 0:07"));
+        assertNull(CommandHandler.parseCutCommand("/cut https://example.com/xBTCs-QaUUY 0:07 3:41"));
+        assertNull(CommandHandler.parseCutCommand("/cut https://youtu.be/xBTCs-QaUUY 0:07 3:41 extra"));
         assertFalse(CommandHandler.isCutCommand("/sanitize_mp3"));
     }
 

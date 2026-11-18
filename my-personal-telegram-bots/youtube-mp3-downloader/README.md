@@ -89,6 +89,8 @@ java -jar target/youtube-mp3-downloader-1.0-SNAPSHOT-jar-with-dependencies.jar
 - `/start` - Show welcome message
 - `/help` - Show help information
 - `/status` - Show current download status
+- `/cut https://www.youtube.com/watch?v=xBTCs-QaUUY 0:07 3:41` - Download the selected audio segment as MP3
+- `/cut 0:07 3:41` in an audio attachment caption - Trim the attached file
 - Send any YouTube URL to download
 
 ## Development
